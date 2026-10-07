@@ -90,6 +90,18 @@ textarea{resize:vertical;min-height:88px}
 .eod-log-form .eod-checkline{display:flex!important;align-items:center;gap:12px;min-height:48px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:#fbfcfe;font-size:12px;color:#2e4059;font-weight:700!important;cursor:pointer}.big-check{width:24px!important;height:24px!important;min-width:24px;cursor:pointer;accent-color:#245fae}.money-input{display:flex;align-items:center;border:1px solid #cdd7e5;border-radius:8px;background:#fff;overflow:hidden}.money-input span{padding:8px 10px;background:#f5f7fa;color:#53667f;font-weight:800}.money-input input{border:0!important;border-radius:0!important}.rfi-cer-table{table-layout:auto;min-width:1180px}
 .message-select-list{border:1px solid var(--line);border-radius:11px;max-height:280px;overflow:auto;background:#fbfcfe}.message-select-row{display:flex;gap:10px;padding:10px 11px;border-bottom:1px solid #edf1f6;cursor:pointer}.message-select-row:last-child{border-bottom:0}.message-select-row input{width:22px;height:22px;margin-top:2px}.message-select-row span{display:grid;gap:3px}.message-select-row strong{font-size:12px}.message-select-row small{font-size:11px;color:var(--muted);line-height:1.35}.rfi-cer-table th.update-col,.rfi-cer-table td.update-cell{min-width:360px;width:34%}.rfi-cer-table td.update-cell{font-size:12px;line-height:1.55;text-align:left!important;white-space:pre-wrap;overflow-wrap:anywhere;vertical-align:top}.rfi-cer-table td.issue-cell{min-width:220px;max-width:420px}.drawer-edit-stage{margin-top:8px}
 .money-cell{font-variant-numeric:tabular-nums;white-space:nowrap;text-align:right}.message-select-row small{display:block}
+
+.activity-day-groups{display:flex;flex-direction:column;gap:12px;padding:12px 14px 16px}
+.activity-group{border:1px solid #e4e8ef;border-radius:10px;background:#fff;overflow:hidden}
+.activity-group-title{font-size:12px;font-weight:800;text-transform:none;letter-spacing:.02em;padding:9px 12px;background:#f6f8fb;border-bottom:1px solid #e4e8ef;color:#243044}
+.activity-bullets{list-style:none;margin:0;padding:0}
+.activity-bullets li{position:relative;padding:11px 74px 11px 26px;border-bottom:1px solid #edf0f4;min-height:48px}
+.activity-bullets li:last-child{border-bottom:0}
+.activity-bullets li:before{content:'•';position:absolute;left:13px;top:10px;font-weight:800;color:#5d6b82}
+.activity-bullet-content{font-size:13px;line-height:1.45;color:#263246;white-space:pre-wrap}
+.activity-bullets .activity-source{margin-top:5px;font-size:10px;color:#8791a2}
+.activity-bullets .activity-edit-btn{position:absolute;right:10px;top:10px}
+
 </style>
 
 <style id="v16-intelligence-css">
@@ -303,7 +315,7 @@ function lastMeaningfulRow(name){
   for(let r=last;r>hr;r--){for(const c of cols){if(!isBlank(cell(ws,r,c))){cache.lastMeaningful[name]=r;return r}}}
   cache.lastMeaningful[name]=hr;return hr;
 }
-function resetCache(){cache={recordsBySheet:{},lastMeaningful:{},indexReady:false}}
+function resetCache(){cache={recordsBySheet:{},lastMeaningful:{},indexReady:false};complianceInstallIndex=null}
 function buildSheetIndex(name){
   if(!wb?.Sheets?.[name])return[]; if(cache.recordsBySheet[name])return cache.recordsBySheet[name];
   const ws=wb.Sheets[name], hr=HEADER_ROWS[name]||1, headers=headerList(name), start=hr+1, last=lastMeaningfulRow(name);
@@ -1049,7 +1061,7 @@ function saveActLog(){
   else {const ws=wb.Sheets['CCEW Creation ACT'];for(const [header,val] of [['Customer Name',cust],['GWT ID',G],['Contractor',contractor],['COES REF',coes],['Status',status]]){const i=colIndex(h,[header]);if(i>=0&&val!=='')setCellPreserve(ws,existing.row,i,coerce(header,val))}const ni=colIndex(h,['Notes']),ai=colIndex(h,['Actions Taken']),di=colIndex(h,['Date Completed']),fi=colIndex(h,['Follow Up Due']);if(fi>=0&&followUp)setCellPreserve(wb.Sheets['CCEW Creation ACT'],existing.row,fi,parseExcelDate(followUp)||followUp);if(ni>=0&&$('actNotes').value.trim())setCellPreserve(ws,existing.row,ni,appendHistory(existing.notes||'',$('actNotes').value.trim()));if(ai>=0&&$('actActions').value.trim())setCellPreserve(ws,existing.row,ai,appendHistory(existing.actionsTaken||'',$('actActions').value.trim()));if(di>=0&&status==='Completed'&&isBlank(existing.values[di]))setCellPreserve(ws,existing.row,di,today())}
   dirty=true;resetCache();closeModal();show('ccew');openJob(G,'activity')
 }
-function saveQuickActivity(){const G=gwt($('qmGwt').value);const textVal=$('qmText').value.trim();if(!G||!textVal){alert('GWT ID and entry are required.');return}const r=pickActivityRecord(G,'update');if(!r){alert('Job not found. Use Log Job to create a new record.');return}const h=r.headers;const idx=colIndex(h,['Activity Log / Update','Activity Log','UPDATE','Actions Taken']);if(idx<0){alert('No update/activity field exists on this row.');return}const label=$('qmKind').value;const typeLabel=label==='Customer call'?'Customer Call':label==='Installer contact'?'Installer Contact':label==='Internal update'?'Internal Update':'Customer Commitment';const updatedHistory=appendHistory(r.values[idx]||'',textVal);setCellPreserve(wb.Sheets[r.sheet],r.row,idx,updatedHistory);rememberActivityMeta(r.sheet,r.row,idx,textVal,typeLabel);const attemptIdx=colIndex(h,['Contact Attempt']);if(label==='Customer call'&&attemptIdx>=0){const cur=Number(r.values[attemptIdx])||0;setCellPreserve(wb.Sheets[r.sheet],r.row,attemptIdx,cur+1)}dirty=true;resetCache();closeModal();openJob(G,'activity',r?.sheet||'')}
+function saveQuickActivity(){const G=gwt($('qmGwt').value);const textVal=$('qmText').value.trim();if(!G||!textVal){alert('GWT ID and entry are required.');return}const r=pickActivityRecord(G,'update');if(!r){alert('Job not found. Use Log Job to create a new record.');return}const h=r.headers;const idx=colIndex(h,['Activity Log / Update','Activity Log','UPDATE','Actions Taken']);if(idx<0){alert('No update/activity field exists on this row.');return}const label=$('qmKind').value;const typeLabel=label==='Customer call'?'Customer Update':label==='Installer contact'?'Installer Update':label==='Internal update'?'Internal Update':'Customer Update';const tagged=`[${typeLabel}] ${textVal}`;const updatedHistory=appendHistory(r.values[idx]||'',tagged);setCellPreserve(wb.Sheets[r.sheet],r.row,idx,updatedHistory);rememberActivityMeta(r.sheet,r.row,idx,tagged,typeLabel);const attemptIdx=colIndex(h,['Contact Attempt']);if(label==='Customer call'&&attemptIdx>=0){const cur=Number(r.values[attemptIdx])||0;setCellPreserve(wb.Sheets[r.sheet],r.row,attemptIdx,cur+1)}dirty=true;resetCache();closeModal();openJob(G,'activity',r?.sheet||'')}
 function pickActivityRecord(g,k,sheetHint='',rowHint=0){
   const candidates=activeRecords().filter(x=>x.gwt===g);
   if(rowHint){const exact=candidates.find(x=>x.sheet===sheetHint&&x.row===rowHint);if(exact)return exact}
@@ -1127,12 +1139,22 @@ function drawerOverview(j){
 }
 function inferActivityType(text){
   const s=norm(text);
-  if(s.includes('[customer call]'))return'Customer Call';
-  if(s.includes('[installer contact]'))return'Installer Contact';
+  const m=String(text||'').match(/^\s*\[([^\]]+)\]\s*/);
+  if(m){const c=String(m[1]).trim();if(['Customer Update','Installer Update','Internal Update','Compliance / CER Update','General Update'].includes(c))return c;}
+  if(s.includes('[customer call]')||s.includes('[customer commitment]')||s.includes('[customer sms]')||s.includes('[customer email]'))return'Customer Update';
+  if(s.includes('[installer contact]')||s.includes('[installer update]'))return'Installer Update';
   if(s.includes('[internal update]'))return'Internal Update';
-  if(s.includes('[customer commitment]'))return'Customer Commitment';
-  if(s.includes('[eod]'))return'EOD';
+  if(s.includes('[cer / greendeal internal update]'))return'Compliance / CER Update';
   return'Update';
+}
+function autoDetectActivityCategory(text,contextRecord){
+  const s=norm(text), r=contextRecord||{};
+  const installerNames=norm(`${r.installer||''} ${r.contractor||''}`);
+  if(/(?:stc form|signature form|customer|homeowner|owner|client).{0,80}(?:sent|emailed|called|spoke|signed|sign|confirmed|requested|callback|unable)/.test(s) || /(?:sent|emailed|called|spoke).{0,80}(?:customer|homeowner|owner|client)/.test(s))return'Customer Update';
+  if(/(?:installer|electrician|contractor|gc|dm|return on site|return visit|cc ew|ccew|coes|selfie|photo|uploaded|upload|rectification|swap|replacement|commissioned|installed|scheduled).{0,100}(?:installer|electrician|contractor|gc|dm|site|upload|uploaded|completed|scheduled|return|ccew|coes|photo|selfie|swap|replacement|commissioned)/.test(s) || installerNames && s.includes(installerNames.split(' ')[0]))return'Installer Update';
+  if(/(?:cer|greendeal|green deal|rfi|rejected|rejection|audit|claim|stc eligibility|compliance requirement|evidence requirement)/.test(s))return'Compliance / CER Update';
+  if(/(?:marlene|sj|aidan|daniel|senior ops|management|teammate|zoho|internal|inspector|ownership|decision|hold|confirmed process|process as-is)/.test(s))return'Internal Update';
+  return'General Update';
 }
 function extractActivityLabel(text){return String(text||'').replace(/^\s*\[[^\]]+\]\s*/,'')}
 function parseHistoryDate(header){const first=String(header||'').trim();const m=first.match(/^(\d{1,2})[-\/ ]([A-Za-z]{3,9})(?:[-\/ ](\d{2,4}))?/);if(!m)return null;const year=Number(m[3]||new Date().getFullYear());const parsed=new Date(`${m[1]} ${m[2].slice(0,3)} ${year}`);return isNaN(parsed)?null:parsed}
@@ -1153,7 +1175,34 @@ function editLatestActivity(sheet,row,kind){
 }
 
 function saveEditedActivity(index){const item=activityEditItems[index];if(!item)return;const r=records(item.sheet).find(x=>x.row===item.row);if(!r)return;const newText=$('editActivityText').value.trim();if(!newText){alert('Update text cannot be empty.');return}const entries=historyEntryGroups(r.values[item.fieldIndex]||'');const oldText=entries[item.entryIndex]?historyEntryDisplay(entries[item.entryIndex]):'';const updated=replaceHistoryEntry(r.values[item.fieldIndex]||'',item.entryIndex,newText);setCellPreserve(wb.Sheets[item.sheet],r.row,item.fieldIndex,updated);if(item.type&&item.type!=='Issue'&&item.type!=='Next Steps')replaceActivityMeta(item.sheet,r.row,item.fieldIndex,oldText,newText,item.type);dirty=true;resetCache();closeModal();renderDrawer();renderView()}
-function activityDedupeKey(x){return `${x.date?isoDate(x.date):'undated'}|${norm(x.type)}|${norm(x.text).replace(/\s+/g,' ')}`}
+function activityDedupeKey(x){return `${x.date?isoDate(x.date):'undated'}|${norm(x.group||x.type)}|${norm(x.text).replace(/\s+/g,' ')}`}
+function activityGroup(type,text,fieldKey,record){
+  const t=String(type||'').trim();
+  const f=String(fieldKey||'').trim();
+  const s=norm(text);
+  const sheet=norm(record?.sheet||'');
+  if(f==='issue'||t==='Issue')return 'Issue / Blocker';
+  if(f==='next'||t==='Next Steps')return 'Next Steps';
+  if(['Customer Update','Installer Update','Internal Update','Compliance / CER Update','General Update'].includes(t))return t;
+  if(t==='EOD')return 'EOD / Lodgement Update';
+  // Workflow context outranks generic wording for historical tracker entries.
+  if(sheet==='cer audited/rejected jobs')return 'Compliance / CER Update';
+  if(sheet==='ccew creation act')return /(?:issued|uploaded|created|completed|sorted|handed over|owner|connections)/.test(s)?'Internal Update':'Compliance / CER Update';
+  if(sheet==='installed (missing info)' && /(?:ccew|coes|selfie|photo|uploaded|installer|return on site|return visit|commissioned|completed install)/.test(s))return 'Installer Update';
+  if(/(?:stc form|signature form|signed|sign the form|sent .*customer|emailed .*customer|customer.*sign)/.test(s))return 'Customer Update';
+  const customer=['Customer Call','Customer Commitment','Customer SMS','Customer Email','Customer Unable to Contact','Customer Requested Callback','Customer Document/Signature Confirmation','Customer Concern / Complaint','Customer Confirmation of Completion'];
+  const installer=['WA — GC','WA — DM','Email Sent','Installer Call','Installer Confirmed Action','Installer Scheduled Return Visit','Installer Completed Action','Evidence Requested','Evidence Received','CCEW Requested','CCEW Issued / Uploaded','Correction Requested','Installer Unable / Delayed','Installer Dispute / Explanation','Installer Contact'];
+  const internal=['Zoho Update / Note','Teammate Update','Senior Ops / Management Decision','Inspector Contact / Call Log','CER / GreenDeal Internal Update','Internal Ownership Change','Internal Hold / Decision Required','System / Equipment Decision','Internal Confirmation of Resolution','Internal Update'];
+  if(customer.includes(t)||s.includes('[customer call]')||s.includes('[customer commitment]'))return 'Customer Update';
+  if(installer.includes(t)||s.includes('[installer contact]'))return 'Installer Update';
+  if(internal.includes(t)||s.includes('[internal update]'))return 'Internal Update';
+  // Legacy entries were often stored as plain "Update" text. Use conservative signals
+  // so the display becomes useful without pretending we know the source category.
+  if(/\b(customer|client|homeowner|customer advised|customer confirmed|customer called|spoke with customer)\b/.test(s))return 'Customer Update';
+  if(/\b(installer|electrician|contractor|installer advised|installer confirmed|installer called|spoke with .*installer|wa gc|wa dm)\b/.test(s))return 'Installer Update';
+  if(/\b(esv|inspector|inspection|cer|greendeal|zoho|senior ops|marlene|isaac|internal|team|portal|allocation|review stage)\b/.test(s))return 'Internal Update';
+  return 'General Update';
+}
 function drawerActivity(j){
   activityEditItems=[];const days=new Map();const seen=new Map();let duplicatesHidden=0;
   const contextSheet=app.drawerContextSheet||'';
@@ -1168,7 +1217,8 @@ function drawerActivity(j){
         const d=block?.date||null;
         const rawEntryText=historyEntryDisplay(entry);
         const typeLabel=fieldKey==='update'?(findActivityMeta(r.sheet,r.row,fieldIndex,rawEntryText)||inferActivityType(rawEntryText)):type;
-        const item={type:typeLabel,text:rawEntryText,sheet:r.sheet,date:d,sheetRow:r.row};
+        const group=activityGroup(typeLabel,rawEntryText,fieldKey,r);
+        const item={type:typeLabel,group,text:rawEntryText,sheet:r.sheet,date:d,sheetRow:r.row,fieldKey};
         const key=activityDedupeKey(item);
         if(seen.has(key)){duplicatesHidden++;return;}
         const idx=registerActivityEditItem({sheet:r.sheet,row:r.row,gwt:r.gwt,fieldIndex,entryIndex,type:typeLabel});
@@ -1177,12 +1227,13 @@ function drawerActivity(j){
       });
     }
   }
-  const typeOrder={'Customer Call':0,'Installer Contact':1,'Internal Update':2,'Customer Commitment':3,'Issue':4,'Next Steps':5,'EOD':6,'Update':7};
+  const groupOrder={'Customer Update':0,'Installer Update':1,'Internal Update':2,'Issue / Blocker':3,'Next Steps':4,'EOD / Lodgement Update':5,'General Update':6};
   const sorted=[...days.entries()].sort((a,b)=>{if(a[0]==='undated')return 1;if(b[0]==='undated')return -1;return new Date(b[0])-new Date(a[0])});
   const s=contextSheet || (j.source==='RFI'?'RFI':j.source==='CER Audit'?'CER Audited/Rejected Jobs':j.source==='Installed / Missing Info'?'Installed (Missing Info)':j.source==='ACT CCEW'?'CCEW Creation ACT':'');
   const duplicateNote=duplicatesHidden?`<span class="activity-duplicate-note">${duplicatesHidden} exact duplicate event(s) hidden from the display; spreadsheet history is unchanged.</span>`:'';
-  return `<div class="activity-toolbar"><button class="primary" onclick="activityPrompt('${esc(j.gwt)}','update','${esc(s)}')">＋ Update</button><button onclick="activityPrompt('${esc(j.gwt)}','issue','${esc(s)}')">＋ Issue</button><button onclick="activityPrompt('${esc(j.gwt)}','next','${esc(s)}')">＋ Next Steps</button><span class="subtle">Today's Dashboard is reference-only and excluded. Exact duplicate events are collapsed for readability.</span>${duplicateNote}</div><div class="timeline">${sorted.length?sorted.map(([d,items])=>{items.sort((a,b)=>(typeOrder[a.type]??9)-(typeOrder[b.type]??9));const undated=d==='undated';return `<div class="activity-day ${undated?'activity-undated':''}"><div class="activity-day-head"><div><strong>${undated?'Date not recorded':fmtDateLong(parseExcelDate(d))}</strong><div class="activity-day-sub">${undated?'No date was recorded in the source field':'Chronological case activity'}</div></div><span class="subtle">${items.length} event(s)</span></div>${items.map(x=>`<div class="activity-entry"><div class="atype">${esc(x.type)}</div><div class="atext">${esc(x.text)}</div><div class="activity-source">${esc(x.sheet)} · row ${x.sheetRow}</div><button class="small activity-edit-btn" onclick="event.stopPropagation();editActivityItem(${x.editIndex})">Edit</button></div>`).join('')}</div>`}).join(''):`<div class="empty">No activity found.</div>`}</div>`
+  return `<div class="activity-toolbar"><button class="primary" onclick="activityPrompt('${esc(j.gwt)}','update','${esc(s)}')">＋ Update</button><button onclick="activityPrompt('${esc(j.gwt)}','issue','${esc(s)}')">＋ Issue</button><button onclick="activityPrompt('${esc(j.gwt)}','next','${esc(s)}')">＋ Next Steps</button><span class="subtle">Today's Dashboard is reference-only and excluded. Activity is grouped by date and operational category; the spreadsheet history remains unchanged.</span>${duplicateNote}</div><div class="timeline">${sorted.length?sorted.map(([d,items])=>{const undated=d==='undated';const groups=new Map();items.forEach(x=>{if(!groups.has(x.group))groups.set(x.group,[]);groups.get(x.group).push(x)});return `<div class="activity-day ${undated?'activity-undated':''}"><div class="activity-day-head"><div><strong>${undated?'Date not recorded':fmtDateLong(parseExcelDate(d))}</strong><div class="activity-day-sub">${undated?'No date was recorded in the source field':'Chronological case activity'}</div></div><span class="subtle">${items.length} update(s)</span></div><div class="activity-day-groups">${[...groups.entries()].sort((a,b)=>(groupOrder[a[0]]??99)-(groupOrder[b[0]]??99)).map(([group,groupItems])=>`<div class="activity-group"><div class="activity-group-title">${esc(group)}</div><ul class="activity-bullets">${groupItems.map(x=>`<li><div class="activity-bullet-content">${esc(x.text)}</div><div class="activity-source">${esc(x.sheet)} · row ${x.sheetRow}${x.type&&x.type!==x.group?` · ${esc(x.type)}`:''}</div><button class="small activity-edit-btn" onclick="event.stopPropagation();editActivityItem(${x.editIndex})">Edit</button></li>`).join('')}</ul></div>`).join('')}</div></div>`}).join(''):`<div class="empty">No activity found.</div>`}</div>`
 }
+
 function activityPrompt(gwtKey,kind,sheetHint='',rowHint=0){
   const title=kind==='issue'?'Add Issue':kind==='next'?'Add Next Steps':'Add Update';
   const j=buildGroupForGwt(gwtKey);
@@ -1192,14 +1243,14 @@ function activityPrompt(gwtKey,kind,sheetHint='',rowHint=0){
   candidates=candidates.filter(r=>colIndex(r.headers,targetHeader)>=0);
   let selector='';
   if(candidates.length>1){selector=`<div class="field"><label>Record / Component</label><select id="activityRecordSelect">${candidates.map(r=>{const wi=colIndex(r.headers,['Work Type']);const label=wi>=0?display(r.values[wi]):'General';return `<option value="${r.row}" data-sheet="${esc(r.sheet)}" ${(r.row===rowHint&&r.sheet===sourceSheet)?'selected':''}>${esc(label)} · ${esc(r.sheet)} · row ${r.row}</option>`}).join('')}</select><div class="subtle" style="margin-top:4px">Choose the component row this entry belongs to. PV and Battery RFI rows for the same GWT are legitimate.</div></div>`}
-  const categories=['Customer Call','Customer Commitment','Customer SMS','Customer Email','Customer Unable to Contact','Customer Requested Callback','Customer Document/Signature Confirmation','Customer Concern / Complaint','Customer Confirmation of Completion','Zoho Update / Note','Teammate Update','Senior Ops / Management Decision','Inspector Contact / Call Log','CER / GreenDeal Internal Update','Internal Ownership Change','Internal Hold / Decision Required','System / Equipment Decision','Internal Confirmation of Resolution','WA — GC','WA — DM','Email Sent','Installer Call','Installer Confirmed Action','Installer Scheduled Return Visit','Installer Completed Action','Evidence Requested','Evidence Received','CCEW Requested','CCEW Issued / Uploaded','Correction Requested','Installer Unable / Delayed','Installer Dispute / Explanation'];
-  const defaultCat=kind==='update'?'Internal Update':'';
-  const catField=kind==='update'?`<div class="field"><label>Activity Category</label><select id="activityCategory">${categories.map(c=>`<option ${c===defaultCat?'selected':''}>${esc(c)}</option>`).join('')}</select></div>`:'';
+  const categories=['Auto-detect','Customer Update','Installer Update','Internal Update','Compliance / CER Update','General Update'];
+  const defaultCat='Auto-detect';
+  const catField=kind==='update'?`<div class="field"><label>Activity Category</label><select id="activityCategory">${categories.map(c=>`<option ${c===defaultCat?'selected':''}>${esc(c)}</option>`).join('')}</select><div class="subtle" style="margin-top:4px">Auto-detect uses the job, sheet, installer/customer relationship and update wording. You can override it when needed.</div></div>`:'';
   $('modalCard').innerHTML=`<div class="modal-head"><div><h2>${title}</h2><div class="subtle">${esc(gwtKey)}${sourceSheet?` · ${esc(sourceSheet)}`:''}</div></div><button onclick="closeModal()">✕</button></div>${selector}${catField}<div class="field"><label>Entry</label><textarea id="activityEntry" autofocus placeholder="One item per line"></textarea></div><div class="modal-foot"><button onclick="closeModal()">Cancel</button><button class="primary" onclick="saveActivityPrompt('${esc(gwtKey)}','${esc(kind)}','${esc(sourceSheet)}')">Save</button></div>`;
   if(candidates.length>1){const sel=$('activityRecordSelect');sel.dataset.sheet=sel.options[sel.selectedIndex]?.dataset.sheet||sourceSheet;sel.onchange=()=>sel.dataset.sheet=sel.options[sel.selectedIndex]?.dataset.sheet||sourceSheet;}
   $('modal').classList.add('open')
 }
-function saveActivityPrompt(g,k,sheetHint=''){const t=$('activityEntry').value.trim();if(!t)return;const rowHint=Number($('activityRecordSelect')?.value||0);const selectedSheet=$('activityRecordSelect')?.dataset.sheet||sheetHint;const category=$('activityCategory')?.value||'';saveUpdateToJob(g,t,k,selectedSheet,rowHint,category)}
+function saveActivityPrompt(g,k,sheetHint=''){const t=$('activityEntry').value.trim();if(!t)return;const rowHint=Number($('activityRecordSelect')?.value||0);const selectedSheet=$('activityRecordSelect')?.dataset.sheet||sheetHint;const r=(buildGroupForGwt(g)?.records||[]).find(x=>x.sheet===selectedSheet&&(!rowHint||x.row===rowHint))||pickActivityRecord(g,'update',selectedSheet,rowHint);let category=$('activityCategory')?.value||'Auto-detect';if(category==='Auto-detect')category=autoDetectActivityCategory(t,r||{});const tagged=`[${category}] ${t}`;saveUpdateToJob(g,tagged,k,selectedSheet,rowHint,category)}
 function openIssueEditor(sheet,row){
   const r=records(sheet).find(x=>x.row===row);if(!r){alert('Issue record could not be located.');return}
   $('modalCard').innerHTML=`<div class="modal-head"><div><h2>Edit Issue</h2><div class="subtle">${esc(sheet)} · ${esc(r.gwt)} · Row ${row}</div></div><button onclick="closeModal()">✕</button></div><div class="field full"><label>Issue</label><textarea id="issueEdit" style="min-height:260px">${esc(r.issue||'')}</textarea></div><div class="notice-card"><h4>Replace vs add</h4><p>This replaces the Issue field exactly as shown. Use “＋ Issue” when you want to preserve the existing issue history and add a new dated issue entry.</p></div><div class="modal-foot"><button onclick="closeModal()">Cancel</button><button class="primary" onclick="saveIssueEditor('${esc(sheet)}',${row})">Save Issue</button></div>`;$('modal').classList.add('open')
@@ -1472,12 +1523,13 @@ attachGlobal();renderView();
     const install=dates[0],deadline=new Date(install);deadline.setFullYear(deadline.getFullYear()+1);
     const days=daysBetween(today(),deadline),claimed=stcClaimedComponents(j);
     const jt=norm([j?.eod?.jobType,j?.installed?.jobType].join(' '));
-    const wantsBat=/battery|pv\s*\+\s*battery|pv\+battery/.test(jt)||claimed.battery||j?.cerRecords?.some(r=>norm([r.issue,r.blocker,r.nextSteps].join(' ')).includes('battery'));
+    const evidenceText=norm((j?.records||[]).map(r=>[r.issue,r.blocker,r.nextSteps,r.update,r.notes,r.actionsTaken,r.status].join(' ')).join(' '));
+    const wantsBat=/battery|pv\s*\+\s*battery|pv\+battery|powerwall|storage/.test(jt)||claimed.battery||j?.cerRecords?.some(r=>/battery|powerwall|storage/.test(norm([r.issue,r.blocker,r.nextSteps].join(' '))));
     const wantsPv=!/battery only/.test(jt);
     const components=[];if(wantsPv&&!claimed.pv)components.push('PV');if(wantsBat&&!claimed.battery)components.push('Battery');
-    if(!components.length)return {install,deadline,days,claimed,components,status:'claimed'};
-    let status='normal';if(days<0)status='expired';else if(days<=7)status='immediate';else if(days<=14)status='critical';else if(days<=30)status='risk';else if(days<=56)status='watch';
-    return {install,deadline,days,claimed,components,status};
+    const status=components.length?(days<0?'expired':days<=7?'immediate':days<=14?'critical':days<=30?'risk':days<=56?'watch':'normal'):'claimed';
+    const componentState={PV:claimed.pv?'lodged':'outstanding',Battery:claimed.battery?'lodged':'outstanding'};
+    return {install,deadline,days,claimed,components,status,componentState,evidenceText};
   }
   function greenDealEditability(j){
     const saved=getGreenDealState(j?.gwt);if(saved?.status)return saved;
@@ -1486,20 +1538,69 @@ attachGlobal();renderView();
     if(/(?:greendeal|green deal).{0,40}(?:open|editable|can edit|still open)/.test(text)||/(?:open|editable).{0,40}(?:greendeal|green deal)/.test(text))return {status:'open',source:'tracker evidence'};
     return {status:'unknown',source:'not confirmed'};
   }
+  let complianceInstallIndex=null;
+  function getComplianceInstallIndex(){
+    if(complianceInstallIndex)return complianceInstallIndex;
+    const byInstallerDate=new Map();
+    for(const r of records('Installed (Missing Info)')){
+      const installer=norm(r.installer||''); const d=r.installDate;
+      if(!installer||!d)continue;
+      const key=`${installer}|${isoDate(d)}`;
+      if(!byInstallerDate.has(key))byInstallerDate.set(key,[]);
+      byInstallerDate.get(key).push(r);
+    }
+    complianceInstallIndex=byInstallerDate;return byInstallerDate;
+  }
   function complianceFindings(j){
-    const findings=[];const text=norm((j?.records||[]).map(r=>[r.issue,r.blocker,r.nextSteps,r.update,r.notes,r.actionsTaken,r.status].join(' ')).join(' '));const expiry=stcExpiryInfo(j);
+    const findings=[];
+    const text=norm((j?.records||[]).map(r=>[r.issue,r.blocker,r.nextSteps,r.update,r.notes,r.actionsTaken,r.status,r.waitingOn].join(' ')).join(' '));
+    const expiry=stcExpiryInfo(j);
+    const add=(f)=>findings.push(f);
     if(expiry&&['watch','risk','critical','immediate','expired'].includes(expiry.status)){
       const label=expiry.status==='expired'?'STC eligibility deadline passed':expiry.status==='immediate'?'STC claim deadline within 7 days':expiry.status==='critical'?'STC claim deadline within 14 days':expiry.status==='risk'?'STC claim deadline within 30 days':'STC claim deadline within 8 weeks';
-      findings.push({key:`stc-expiry|${j.gwt}|${expiry.status}|${isoDate(expiry.deadline)}`,type:'STC Expiry',severity:['expired','immediate'].includes(expiry.status)?'High':['critical','risk'].includes(expiry.status)?'Medium':'Low',label,text:`${label}. ${expiry.components.join(' + ')} STC component${expiry.components.length>1?'s':''} not confirmed lodged. Deadline ${fmtDate(expiry.deadline)}.`,expiry});
+      const severity=['expired','immediate'].includes(expiry.status)?'High':['critical','risk'].includes(expiry.status)?'Medium':'Low';
+      add({key:`stc-expiry|${j.gwt}|${expiry.status}|${isoDate(expiry.deadline)}`,type:'STC Expiry',severity,label,text:`${label}. ${expiry.components.join(' + ')} component${expiry.components.length>1?'s':''} not confirmed lodged. Deadline ${fmtDate(expiry.deadline)}.`,expiry,rule:'CER 12-month STC creation deadline'});
     }
     const hasBattery=/battery|powerwall|storage/.test(text)||/battery/.test(norm(j?.jobType||''));
     if(hasBattery&&expiry?.install&&expiry.install>=new Date('2026-03-01')&&!/critical labell?ing|labell?ing photo|battery label/.test(text)){
-      findings.push({key:`battery-label-photo|${j.gwt}`,type:'CER Evidence',severity:'Medium',label:'Battery labelling photo evidence not evident',text:'Battery installation is on/after 1 March 2026, but the tracker does not clearly record the required critical-labelling photo evidence. Check GreenDeal evidence before requesting a return visit.',rule:'CER battery photo requirement'});
+      add({key:`battery-label-photo|${j.gwt}`,type:'CER Evidence',severity:'Medium',label:'Battery labelling photo evidence not evident',text:'Battery installation is on/after 1 March 2026, but the tracker does not clearly record the required critical-labelling photo evidence. Check GreenDeal evidence before requesting a return visit.',rule:'CER battery critical-labelling photo requirement'});
     }
-    if(/switchboard|msb/.test(text)&&/photo|evidence/.test(text)&&/missing|rejected|incorrect|not show/.test(text))findings.push({key:`msb-evidence|${j.gwt}`,type:'CER Evidence',severity:'Medium',label:'Switchboard evidence risk',text:'Current activity indicates switchboard/meter-box evidence is incomplete or rejected. Verify the exact evidence requirement before requesting new photos.'});
+    if(hasBattery&&!/serial|rec registry|battery serial/.test(text)&&expiry?.install&&expiry.install>=new Date('2025-07-01')){
+      add({key:`battery-serial-evidence|${j.gwt}`,type:'CER Evidence',severity:'Low',label:'Battery / inverter serial evidence not evident',text:'Tracker text does not clearly establish the required serial-number evidence. Verify the existing GreenDeal evidence before requesting new photos.',rule:'CER battery photo evidence'});
+    }
+    if(/battery/.test(text)&&/solar|pv/.test(text)&&!/(separate|each system|both systems).{0,80}(photo|selfie|evidence)|(?:photo|selfie|evidence).{0,80}(separate|each system|both systems)/.test(text)){
+      add({key:`pv-battery-separate-evidence|${j.gwt}`,type:'CER Evidence',severity:'Low',label:'Separate PV / battery evidence not evident',text:'The job appears to contain both PV and battery work, but the tracker does not clearly establish separate on-site verification evidence for each system. Verify existing evidence before requesting action.',rule:'CER separate PV and battery verification photos'});
+    }
+    if(/switchboard|msb/.test(text)&&/photo|evidence/.test(text)&&/missing|rejected|incorrect|not show|incomplete/.test(text)){
+      add({key:`msb-evidence|${j.gwt}`,type:'CER Evidence',severity:'Medium',label:'Switchboard evidence risk',text:'Current activity indicates switchboard/meter-box evidence is incomplete or rejected. Verify the exact evidence requirement before requesting new photos.',rule:'CER evidence review'});
+    }
     const gd=greenDealEditability(j);
-    if(gd.status==='unknown'&&/photo|evidence|selfie|switchboard|msb|panel|battery label|geotag|timestamp/.test(text))findings.push({key:`gd-editability|${j.gwt}`,type:'Confirmation Required',severity:'High',label:'GreenDeal editability must be confirmed',text:'New compliance evidence appears to be required, but the CRM cannot confirm whether the GreenDeal job is still editable. Confirm Open/Editable or Closed/Locked before drafting the installer instruction.',confirmation:true});
-    if(/(?:asked|requested|requesting|please).{0,60}(?:inverter|swap|replacement|return to site|rectification)/.test(text)&&!/(?:confirmed|completed|finished|done|uploaded|evidence received).{0,60}(?:inverter|swap|replacement|return to site|rectification)/.test(text))findings.push({key:`completion-proof|${j.gwt}`,type:'Process Risk',severity:'Medium',label:'Requested work is not confirmed complete',text:'The tracker shows a request/instruction but no positive confirmation that the installer completed the work and supplied the required evidence.'});
+    if(gd.status==='unknown'&&/photo|evidence|selfie|switchboard|msb|panel|battery label|serial|geotag|timestamp/.test(text)){
+      add({key:`gd-editability|${j.gwt}`,type:'Confirmation Required',severity:'High',label:'GreenDeal editability must be confirmed',text:'New compliance evidence appears to be required, but the CRM cannot confirm whether the GreenDeal job is still editable. Confirm Open/Editable or Closed/Locked before drafting the installer instruction.',confirmation:true,rule:'GreenDeal evidence workflow'});
+    }
+    if(/(?:asked|requested|requesting|please).{0,70}(?:inverter|swap|replacement|rectification|return to site)/.test(text)&&!/(?:confirmed|completed|finished|done|uploaded|evidence received).{0,90}(?:inverter|swap|replacement|rectification)/.test(text)){
+      add({key:`completion-proof|${j.gwt}`,type:'Process Risk',severity:'Medium',label:'Requested work is not confirmed complete',text:'The tracker shows a request/instruction but no positive confirmation that the installer completed the work and supplied the required evidence.',rule:'Resolution proof'});
+    }
+    const installerName=norm(j?.installer||j?.currentRecord?.installer||'');
+    if(installerName){
+      const ownDate=expiry?.install;
+      if(ownDate){
+        const sameDay=getComplianceInstallIndex().get(`${installerName}|${isoDate(ownDate)}`)||[];
+        const uniqueGwt=new Set(sameDay.map(r=>r.gwt).filter(Boolean));
+        if(j.gwt)uniqueGwt.add(j.gwt);
+        if(uniqueGwt.size>2){
+          add({key:`saa-install-limit|${installerName}|${isoDate(ownDate)}`,type:'Compliance',severity:'Medium',label:'Potential SAA daily installation-limit issue',text:`The same accredited installer appears against ${uniqueGwt.size} installation record(s) on ${fmtDate(ownDate)}. SAA limits sign-off to no more than 2 installations per day unless an approved exemption applies. Verify sign-off dates and any exemption before treating this as a breach.`,rule:'SAA installation limit'});
+        }
+      }
+    }
+    const dateStrings=(j?.records||[]).flatMap(r=>[r.installDate,r.effectiveDate,r.followUpDue].filter(Boolean));
+    const updateText=(j?.records||[]).map(r=>r.update||'').join(' ');
+    if(expiry?.install&&/(?:test date|certificate of compliance|ccew|coes).{0,60}(?:date|dated)/.test(norm(updateText))){
+      const certDates=[...updateText.matchAll(/(?:test date|certificate[^\n]{0,30}|ccew|coes)[^\n]{0,80}(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}|\d{1,2}\s+[A-Za-z]{3,9}\s+\d{4})/gi)].map(m=>parseExcelDate(m[1])).filter(Boolean);
+      if(certDates.length&&certDates.some(d=>isoDate(d)!==isoDate(expiry.install))){
+        add({key:`date-consistency|${j.gwt}|${isoDate(expiry.install)}`,type:'Compliance',severity:'Low',label:'Installation / certificate date inconsistency',text:'The tracker contains a certificate/test date that does not clearly match the installation/sign-off date. Verify the dates before relying on the record for STC eligibility.',rule:'SAA sign-off date consistency'});
+      }
+    }
     return findings;
   }
   function installerDraftContext(r){const j=buildGroupForGwt(r?.gwt);return {gd:greenDealEditability(j||{}),findings:complianceFindings(j||{}),expiry:stcExpiryInfo(j||{})};}
@@ -1508,8 +1609,9 @@ attachGlobal();renderView();
     const add=(bucket,item)=>{if(!item||!item.key)return;if(!bucket.some(x=>x.key===item.key))bucket.push(item)};
     const now=today();
     for(const f of complianceFindings(j)){
-      const bucket=f.severity==='High'?actionNow:review;
-      add(bucket,{key:f.key,type:f.type,label:f.label,owner:'Isaac',due:f.expiry?.deadline||null,priority:f.severity==='High'?'High':f.severity==='Medium'?'Medium':'Low',record:null,text:f.text,confirmation:f.confirmation,rule:f.rule});
+      const expiryFinding=f.type==='STC Expiry';
+      const bucket=expiryFinding?actionNow:(f.severity==='High'?actionNow:review);
+      add(bucket,{key:f.key,type:f.type,label:f.label,owner:'Isaac',due:f.expiry?.deadline||null,priority:expiryFinding?(f.severity==='Low'?'Medium':'High'):(f.severity==='High'?'High':f.severity==='Medium'?'Medium':'Low'),record:null,text:f.text,confirmation:f.confirmation,rule:f.rule,expiry:f.expiry});
     }
     // Highest-priority operational stages first.
     for(const r of (j.cerRecords||[])){
@@ -1584,6 +1686,9 @@ attachGlobal();renderView();
     else if(actionNow.length||activeReview.length)priority='Medium';
     const state=actionNow.length?'Action Now':activeReview.length?'Review':monitor.length?'Monitor':'Resolved';
     const currentAction=actionNow[0]||activeReview[0]||monitor[0]||null;
+    const decisions=activeReview.filter(x=>x.confirmation||x.type==='stale'||x.type==='legacy'||x.type==='Confirmation Required');
+    const confidence=(currentAction?.confirmation||decisions.length)?'Unknown':(currentAction?'Supported':'Confirmed');
+    const consequence=currentAction?.type==='STC Expiry'?'Claim deadline risk':currentAction?.type==='CER'?'CER/compliance blockage':currentAction?.type==='Follow-Up'?'Risk of operational work falling through':currentAction?.type==='RFI'?'Compliance or evidence work remains open':currentAction?.type==='ACT CCEW'?'Internal CCEW ownership unresolved':'No immediate operational consequence identified';
     const why=[];
     const cf=complianceFindings(j);if(cf.length)why.push(cf.map(x=>x.label).join('; '));
     if(j.cerRecords?.length)why.push('CER has an active audit/rejection record.');
@@ -1595,7 +1700,7 @@ attachGlobal();renderView();
       else if(li.partial)why.push(`EOD is only partially lodged (${li.label}).`);
     }
     if(!why.length)why.push('No active operational blocker identified from the current tracker.');
-    return {state,priority,actionNow:actionNow.filter(x=>!warningAcks[x.key]||x.type!=='legacy'),review:activeReview,acknowledgedReview:ackedReview,monitor,resolved,primary:currentAction,why:why.join(' '),company};
+    return {state,priority,actionNow:actionNow.filter(x=>!warningAcks[x.key]||x.type!=='legacy'),review:activeReview,acknowledgedReview:ackedReview,monitor,resolved,decisions,primary:currentAction,confidence,consequence,why:why.join(' '),company};
   }
 
   function makeUnifiedSearchRecords(q){
@@ -1678,17 +1783,75 @@ attachGlobal();renderView();
   }
   function renderDashboardV16(){
     const states=groupJobs().map(j=>({j,t:truthForJob(j)}));
-    const action=states.filter(x=>x.t.actionNow.length), review=states.filter(x=>x.t.review.length&&!x.t.actionNow.length), monitor=states.filter(x=>!x.t.actionNow.length&&!x.t.review.length&&x.t.monitor.length), resolved=states.filter(x=>!x.t.actionNow.length&&!x.t.review.length&&!x.t.monitor.length);
+    const cer=states.filter(x=>x.t.actionNow.some(a=>a.type==='CER'));
+    const expiry=states.filter(x=>x.t.actionNow.some(a=>a.type==='STC Expiry'));
+    const missingDue=states.filter(x=>x.t.actionNow.some(a=>a.type==='Follow-Up'));
+    const otherAction=states.filter(x=>x.t.actionNow.length && !x.t.actionNow.some(a=>['CER','STC Expiry','Follow-Up'].includes(a.type)));
+    const review=states.filter(x=>x.t.review.length && !x.t.actionNow.length);
+    const decisions=states.filter(x=>x.t.decisions?.length && !x.t.actionNow.length);
+    const monitor=states.filter(x=>!x.t.actionNow.length&&!x.t.review.length&&x.t.monitor.length);
+    const resolved=states.filter(x=>!x.t.actionNow.length&&!x.t.review.length&&!x.t.monitor.length);
     const warns=warningList(), activeWarns=warns.filter(w=>!warningAcks[w.key]), acked=warns.length-activeWarns.length, changes=changedToday();
-    const topAction=[...action].sort((a,b)=>{const aa=a.t.actionNow.some(x=>x.priority==='High')?0:1,bb=b.t.actionNow.some(x=>x.priority==='High')?0:1;return aa-bb||String(a.j.customer).localeCompare(String(b.j.customer))}).slice(0,18);
-    const cards=(items,kind)=>items.length?items.map(({j,t})=>{const x=t.primary||t.actionNow[0]||t.review[0]||t.monitor[0];return `<button class="attention-row" style="text-align:left" onclick="openJob('${esc(j.gwt)}','overview')"><div class="attention-main"><div><span class="gwt">${esc(j.gwt||'')}</span><strong>${esc(j.customer||'')}</strong><div class="address">${esc(j.address||'')}</div></div><span class="badge ${kind==='action'?(x?.priority==='High'?'red':'amber'):kind==='review'?'purple':kind==='monitor'?'blue':'green'}">${esc(kind==='action'?'Action Now':kind==='review'?'Review':kind==='monitor'?'Monitor':'Resolved')}</span></div><div class="attention-meta"><span><b>Owner:</b> ${esc(x?.owner||'—')}</span><span><b>Next:</b> ${esc(x?.label||'—')}</span><span><b>Due:</b> ${x?.due?esc(fmtDate(x.due)):'—'}</span><span><b>Company:</b> ${esc(t.company||j.company||'—')}</span></div></button>`}).join(''):`<div class="empty">No ${kind} items.</div>`;
-    $('dashboard').innerHTML=`<div class="section-title"><div><h1>What actually needs my attention?</h1><p>The CRM interprets the tracker before creating work. Legacy lodgement notes are understood rather than treated as data-cleaning problems.</p></div><div class="actions"><button onclick="showDailyHandover()">Copy Daily Handover</button><button onclick="openAcknowledgedWarnings()">Acknowledged (${acked})</button></div></div>
-    <div class="kpis"><div class="kpi red"><div class="label">Action Now</div><div class="num">${action.length}</div><div class="hint">Actual work requiring action</div></div><div class="kpi purple"><div class="label">Review</div><div class="num">${activeWarns.length}</div><div class="hint">Meaningful warnings only</div></div><div class="kpi blue"><div class="label">Monitor</div><div class="num">${monitor.length}</div><div class="hint">Scheduled / waiting without a current chase</div></div><div class="kpi green"><div class="label">Changed Today</div><div class="num">${changes.length}</div><div class="hint">Dated operational activity</div></div></div>
-    <div class="panel"><div class="panel-title"><h3>Action Now</h3><span class="subtle">${action.length} job(s)</span></div>${cards(topAction,'action')}</div>
-    <div class="panel" style="margin-top:14px"><div class="panel-title"><h3>Review</h3><span class="subtle">${activeWarns.length} warning(s) · acknowledgements suppress noise without deleting the underlying record</span></div>${activeWarns.length?`<div class="warning-list">${activeWarns.map(w=>`<div class="warning-row"><div><strong>${esc(w.label)}</strong><div class="subtle">${esc(w.job?.gwt||'')} · ${esc(w.job?.customer||'')}</div><div class="wraptext" style="margin-top:4px">${esc(w.text||'')}</div></div><div class="actions"><button class="small" onclick="openJob('${esc(w.job?.gwt||'')}','overview')">Open</button><button class="small" onclick="acknowledgeWarning('${esc(w.key)}')">Acknowledge</button></div></div>`).join('')}</div>`:'<div class="empty">No meaningful warnings currently require review.</div>'}</div>
-    <div class="two-col"><div class="panel"><div class="panel-title"><h3>Monitor</h3><span class="subtle">${monitor.length} job(s)</span></div>${cards(monitor.slice(0,10),'monitor')}</div><div class="panel"><div class="panel-title"><h3>Recently Resolved / Quiet</h3><span class="subtle">${resolved.length} job(s)</span></div>${cards(resolved.slice(0,10),'resolved')}</div></div>
-    <div class="panel" style="margin-top:14px"><div class="panel-title"><h3>What Changed Today</h3><span class="subtle">${changes.length} event(s)</span></div>${changes.length?`<div class="change-list">${changes.slice(-20).map(x=>`<button class="change-row" style="text-align:left" onclick="openJob('${esc(x.r.gwt)}','activity','${esc(x.r.sheet)}',${x.r.row})"><span class="badge gray">${esc(x.type)}</span><span><strong>${esc(x.r.gwt||'')}</strong> · ${esc(x.r.customer||'')}</span><span class="wraptext">${esc(x.text)}</span></button>`).join('')}`:'<div class="empty">No dated activity was recorded today.</div>'}</div>
-    <div class="panel" style="margin-top:14px"><div class="panel-title"><h3>Escalations to Isaac</h3><span class="subtle">Highest-risk operational items</span></div>${action.filter(x=>x.t.actionNow.some(a=>a.priority==='High')).slice(0,10).map(({j,t})=>`<button class="attention-row" style="text-align:left" onclick="openJob('${esc(j.gwt)}','overview')"><div class="attention-main"><div><span class="gwt">${esc(j.gwt)}</span><strong>${esc(j.customer)}</strong><div class="address">${esc(j.address)}</div></div><span class="badge red">High</span></div><div class="attention-meta"><span><b>Reason:</b> ${esc(t.primary?.label||t.why)}</span><span><b>Owner:</b> ${esc(t.primary?.owner||'—')}</span><span><b>Company:</b> ${esc(t.company||j.company||'—')}</span></div></button>`).join('')||'<div class="empty">No high-priority escalation items.</div>'}</div>`;
+
+    const priorityRank=(x)=>{
+      const a=x.t.actionNow||[];
+      if(a.some(i=>i.type==='CER'))return 0;
+      if(a.some(i=>i.type==='STC Expiry'))return 1;
+      if(a.some(i=>i.type==='Follow-Up'))return 2;
+      if(a.some(i=>i.priority==='High'))return 3;
+      if(a.length)return 4;
+      if(x.t.review.length)return 5;
+      if(x.t.monitor.length)return 6;
+      return 7;
+    };
+    const sortedAction=[...states.filter(x=>x.t.actionNow.length)].sort((a,b)=>priorityRank(a)-priorityRank(b)||String(a.j.customer).localeCompare(String(b.j.customer)));
+
+    const primaryFor=(x)=>{
+      const arr=x.t.actionNow||[];
+      const sorted=[...arr].sort((a,b)=>{
+        const rank=i=>i.type==='CER'?0:i.type==='STC Expiry'?1:i.type==='Follow-Up'?2:i.priority==='High'?3:4;
+        return rank(a)-rank(b);
+      });
+      return sorted[0]||x.t.review[0]||x.t.monitor[0];
+    };
+    const cards=(items,kind)=>items.length?items.map(({j,t})=>{
+      const x=primaryFor({j,t});
+      const badgeClass=kind==='action'?(x?.type==='CER'||x?.type==='STC Expiry'||x?.priority==='High'?'red':'amber'):kind==='review'?'purple':kind==='monitor'?'blue':'green';
+      return `<button class="attention-row" style="text-align:left" onclick="openJob('${esc(j.gwt)}','overview')"><div class="attention-main"><div><span class="gwt">${esc(j.gwt||'')}</span><strong>${esc(j.customer||'')}</strong><div class="address">${esc(j.address||'')}</div></div><span class="badge ${badgeClass}">${esc(kind==='action'?'Action Now':kind==='review'?'Review':kind==='monitor'?'Monitor':'Resolved')}</span></div><div class="attention-meta"><span><b>Priority:</b> ${esc(x?.type==='CER'?'1 · CER':x?.type==='STC Expiry'?'2 · STC Expiry':x?.type==='Follow-Up'?'3 · Missing Follow-Up':'4 · Operational')}</span><span><b>Owner:</b> ${esc(x?.owner||'—')}</span><span><b>Next:</b> ${esc(x?.label||'—')}</span><span><b>Due:</b> ${x?.due?esc(fmtDate(x.due)):'—'}</span><span><b>Company:</b> ${esc(t.company||j.company||'—')}</span></div><div class="subtle" style="margin-top:6px"><b>Why:</b> ${esc(x?.text||t.why||'')}</div></button>`;
+    }).join(''):`<div class="empty">No ${kind} items.</div>`;
+
+    const grouped=(arr)=>arr.map(x=>({j:x.j,t:x.t}));
+    const expiryMonitor=monitor.filter(x=>{const f=(x.t.monitor||[]).some(a=>a.type==='STC Expiry');return f});
+    const nonExpiryMonitor=monitor.filter(x=>!expiryMonitor.includes(x));
+
+    $('dashboard').innerHTML=`
+    <div class="section-title"><div><h1>What actually needs my attention?</h1><p>Priority is deliberately ordered: <b>1. CER Cases → 2. STC Expiry Intelligence → 3. Missing Follow-Up Due → 4. Other operational work.</b> The CRM does not treat a request as proof of completion.</p></div><div class="actions"><button onclick="showDailyHandover()">Copy Daily Handover</button><button onclick="openAcknowledgedWarnings()">Acknowledged (${acked})</button></div></div>
+
+    <div class="kpis">
+      <div class="kpi red"><div class="label">🔴 CER Cases</div><div class="num">${cer.length}</div><div class="hint">Highest operational priority</div></div>
+      <div class="kpi red"><div class="label">🔴 STC Expiry</div><div class="num">${expiry.length}</div><div class="hint">Claim deadline risk requiring attention</div></div>
+      <div class="kpi amber"><div class="label">🟠 Missing Follow-Up Due</div><div class="num">${missingDue.length}</div><div class="hint">Mandatory dates missing</div></div>
+      <div class="kpi amber"><div class="label">🟠 Other Action</div><div class="num">${otherAction.length}</div><div class="hint">Operational work to complete</div></div>
+      <div class="kpi purple"><div class="label">⚠ Review / Confirm</div><div class="num">${review.length}</div><div class="hint">CRM needs a decision or verification</div></div>
+      <div class="kpi blue"><div class="label">🟡 Monitor</div><div class="num">${monitor.length}</div><div class="hint">Waiting / upcoming work</div></div>
+    </div>
+
+    ${missingDue.length?`<div class="banner warn"><b>⚠ Missing Follow-Up Due — ${missingDue.length} job(s):</b> These records require a current Follow-Up Due date and are deliberately placed above normal operational work so they cannot fall through the queue. Click a job below to update it.</div>`:''}
+
+    <div class="panel"><div class="panel-title"><h3>🔴 Priority 1 — CER Cases</h3><span class="subtle">${cer.length} job(s) · always first</span></div>${cards(cer,'action')}</div>
+    <div class="panel" style="margin-top:14px"><div class="panel-title"><h3>🔴 Priority 2 — STC Expiry Intelligence</h3><span class="subtle">${expiry.length} job(s) · 12-month claim deadline</span></div>${cards(expiry,'action')}</div>
+    <div class="panel" style="margin-top:14px"><div class="panel-title"><h3>🟠 Priority 3 — Missing Follow-Up Due</h3><span class="subtle">${missingDue.length} job(s) · mandatory follow-up date</span></div>${cards(missingDue,'action')}</div>
+    <div class="panel" style="margin-top:14px"><div class="panel-title"><h3>🟠 Priority 4 — Other Operational Work</h3><span class="subtle">${otherAction.length} job(s)</span></div>${cards(otherAction.slice(0,30),'action')}</div>
+
+    <div class="panel" style="margin-top:14px"><div class="panel-title"><h3>⚠ Review / Confirmation Required</h3><span class="subtle">${review.length} job(s) · CRM will not guess on compliance-critical uncertainty</span></div>${review.length?cards(review.slice(0,30),'review'):'<div class="empty">No unresolved confirmation or review items.</div>'}</div>
+
+    <div class="panel" style="margin-top:14px"><div class="panel-title"><h3>🟣 Decisions / Confirmations Required</h3><span class="subtle">${decisions.length} job(s) · only shown when the CRM cannot safely determine the next move</span></div>${decisions.length?cards(decisions.slice(0,20),'review'):'<div class="empty">No outstanding decisions or confirmations.</div>'}</div>
+
+    <div class="two-col" style="margin-top:14px"><div class="panel"><div class="panel-title"><h3>🟡 Monitor</h3><span class="subtle">${monitor.length} job(s)</span></div>${cards(monitor.slice(0,15),'monitor')}</div><div class="panel"><div class="panel-title"><h3>Recently Resolved / Quiet</h3><span class="subtle">${resolved.length} job(s)</span></div>${cards(resolved.slice(0,10),'resolved')}</div></div>
+
+    <div class="panel" style="margin-top:14px"><div class="panel-title"><h3>What Changed Today</h3><span class="subtle">${changes.length} event(s)</span></div>${changes.length?`<div class="change-list">${changes.slice(-20).map(x=>`<button class="change-row" style="text-align:left" onclick="openJob('${esc(x.r.gwt)}','activity','${esc(x.r.sheet)}',${x.r.row})"><span class="badge gray">${esc(x.type)}</span><span><strong>${esc(x.r.gwt||'')}</strong> · ${esc(x.r.customer||'')}</span><span class="wraptext">${esc(x.text)}</span></button>`).join('')}</div>`:'<div class="empty">No dated activity was recorded today.</div>'}</div>
+
+    <div class="panel" style="margin-top:14px"><div class="panel-title"><h3>Escalations to Isaac</h3><span class="subtle">CER → STC Expiry → Missing Due → other high-risk work</span></div>${sortedAction.filter(x=>x.t.actionNow.some(a=>a.priority==='High'||a.type==='CER'||a.type==='STC Expiry')).slice(0,15).map(({j,t})=>{const x=primaryFor({j,t});return `<button class="attention-row" style="text-align:left" onclick="openJob('${esc(j.gwt)}','overview')"><div class="attention-main"><div><span class="gwt">${esc(j.gwt)}</span><strong>${esc(j.customer)}</strong><div class="address">${esc(j.address)}</div></div><span class="badge red">${esc(x?.type==='CER'?'CER':x?.type==='STC Expiry'?'STC Expiry':'High')}</span></div><div class="attention-meta"><span><b>Reason:</b> ${esc(x?.label||t.why)}</span><span><b>Owner:</b> ${esc(x?.owner||'—')}</span><span><b>Company:</b> ${esc(t.company||j.company||'—')}</span></div></button>`}).join('')||'<div class="empty">No high-priority escalation items.</div>'}</div>`;
   }
 
   function renderJobsV16(){
@@ -1707,7 +1870,7 @@ attachGlobal();renderView();
     if(app.dueFilter==='overdue')filtered=filtered.filter(({t})=>t.actionNow.some(a=>a.due&&dateOnly(a.due)<today()));
     if(app.dueFilter==='scheduled')filtered=filtered.filter(({t})=>t.monitor.length||t.actionNow.some(a=>a.due));
     const total=states.length;
-    $('jobs').innerHTML=`<div class="section-title"><div><h1>Jobs &amp; Queue</h1><p>Action queue based on actual operational truth. No warning is created merely because a Follow-Up Due field is blank.</p></div><div class="actions"><button onclick="quickLog('installed')">＋ Log Job</button><button class="primary" onclick="quickLog('update')">＋ Add Update</button></div></div>
+    $('jobs').innerHTML=`<div class="section-title"><div><h1>Jobs &amp; Queue</h1><p>Action queue based on actual operational truth. Actionable workflow rows without a Follow-Up Due date are deliberately surfaced so they cannot fall through the queue.</p></div><div class="actions"><button onclick="quickLog('installed')">＋ Log Job</button><button class="primary" onclick="quickLog('update')">＋ Add Update</button></div></div>
     <div class="seg"><button class="${app.jobFilter==='all'?'active':''}" onclick="app.jobFilter='all';renderJobs()">All <b>${total}</b></button><button class="${app.jobFilter==='installed / missing info'?'active':''}" onclick="app.jobFilter='installed / missing info';renderJobs()">Installed / Missing</button><button class="${app.jobFilter==='rfi'?'active':''}" onclick="app.jobFilter='rfi';renderJobs()">RFI</button><button class="${app.jobFilter==='cer audit'?'active':''}" onclick="app.jobFilter='cer audit';renderJobs()">CER</button><button class="${app.jobFilter==='lodged'?'active':''}" onclick="app.jobFilter='lodged';renderJobs()">EOD Partial</button><button class="${app.jobFilter==='review'?'active':''}" onclick="app.jobFilter='review';renderJobs()">Review</button><button class="${app.jobFilter==='high'?'active':''}" onclick="app.jobFilter='high';renderJobs()">High</button></div>
     <div class="panel"><div class="queue-tools"><input id="jobsQ" placeholder="Search GWT, customer, address, installer, company, issue, NMI…" value=""><select id="jobsDue"><option value="current">Current action queue</option><option value="today">Due today</option><option value="overdue">Overdue</option><option value="scheduled">Scheduled / monitor</option></select><button class="small" onclick="clearFilters()">Reset</button></div>${workTableV16(filtered)}</div>`;
     $('jobsQ').oninput=e=>{query=e.target.value.trim();if(query){$('globalSearch').value=query;renderJobs()}else{renderJobs()}};$('jobsDue').value=app.dueFilter;$('jobsDue').onchange=e=>{app.dueFilter=e.target.value;renderJobs()};
@@ -2195,7 +2358,7 @@ attachGlobal();renderView();
         <div class="google-live-grid" style="margin-top:12px"><div class="google-live-card"><div class="k">Spreadsheet</div><div class="v">${esc(state.spreadsheetTitle||'—')}</div></div><div class="google-live-card"><div class="k">Last sync</div><div class="v">${state.lastSyncAt?esc(new Date(state.lastSyncAt).toLocaleTimeString('en-AU')):'—'}</div></div><div class="google-live-card"><div class="k">Auto refresh</div><div class="v">${state.autoSync?'30 sec while visible':'Off'}</div></div></div>
         <div class="google-config" style="margin-top:12px"><label class="inline-label"><input id="googleAutoSync" type="checkbox" ${state.autoSync?'checked':''}> Pull Google changes automatically every 30 seconds when the CRM is visible and idle</label>
         <div class="actions"><button class="primary" onclick="refreshGoogle(false)">↻ Sync Now</button><button onclick="googleSaveAutoSync()">Save Sync Setting</button><button class="danger" onclick="disconnectGoogle()">Disconnect</button></div>
-        <div class="field"><label>Connected Google Sheet</label><input id="googleSheetRef" value="${esc(`https://docs.google.com/spreadsheets/d/${state.spreadsheetId}/edit`)}"></div>
+        <div class="field"><label>Connected Spreadsheet ID</label><input id="googleSheetRef" value="${esc(state.spreadsheetId||'')}" readonly></div>
         <div class="notice-card"><h4>Operational rule</h4><p>Google Sheets remains the source of truth. The CRM never silently overwrites a Google cell that changed after the CRM last read it. Conflict = stop, refresh, then retry.</p></div>
         <div class="google-activity"><div class="subtle" style="margin-bottom:5px">Recent connection activity</div>${history}</div></div>
         <div class="modal-foot"><button onclick="closeModal()">Close</button><button class="primary" onclick="loadConnectedGoogleSheet()">Re-verify / Reload Sheet</button></div>`;
@@ -2210,10 +2373,10 @@ attachGlobal();renderView();
       <div id="googlePanelExtra"></div><div class="modal-foot"><button onclick="closeModal()">Cancel</button></div>`;
     }
     return `<div class="modal-head"><div><h2>Connect your Green Deal Google Sheet</h2><div class="subtle">Step 2 — choose the live tracker.</div></div><button onclick="closeModal()">✕</button></div>
-      <div class="google-success"><b>Google account authorised.</b> Now paste the Google Sheet URL.</div>
-      <div class="google-config" style="margin-top:12px"><div class="field"><label>Google Sheet URL</label><input id="googleSheetRef" placeholder="https://docs.google.com/spreadsheets/d/..." value="${esc(state.spreadsheetId?`https://docs.google.com/spreadsheets/d/${state.spreadsheetId}/edit`: '')}"></div>
+      <div class="google-success"><b>Google account authorised.</b> Now enter the Google Sheet Spreadsheet ID.</div>
+      <div class="google-config" style="margin-top:12px"><div class="field"><label>Google Sheet Spreadsheet ID</label><input id="googleSheetRef" placeholder="e.g. 1AbC..." value="${esc(state.spreadsheetId||'')}"></div>
       <label class="inline-label"><input id="googleAutoSync" type="checkbox" ${state.autoSync?'checked':''}> Automatically pull Google changes every 30 seconds when idle</label>
-      <div class="hint">Full Google Sheets URLs are accepted, including URLs with <span class="mono">?pli=1</span>, <span class="mono">?gid=...</span> and <span class="mono">#gid=...</span>.</div></div>
+      <div class="hint">Enter the Spreadsheet ID only. It is the long value between <span class="mono">/d/</span> and <span class="mono">/edit</span> in the Google Sheets URL.</div></div>
       <div id="googlePanelExtra"></div><div class="modal-foot"><button onclick="closeModal()">Cancel</button><button class="primary" onclick="loadConnectedGoogleSheet()">Verify & Load Sheet</button></div>`;
   }
   function setGooglePanel(extra=''){const el=$('modalCard');if(el){const e=$('googlePanelExtra');if(e)e.innerHTML=extra}}
