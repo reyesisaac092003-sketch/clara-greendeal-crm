@@ -155,10 +155,10 @@ textarea{resize:vertical;min-height:88px}
    - SheetJS 0.20.3 via official CDN.
    V8 workflow refinements: mandatory Follow Up Due across active queues, stage-aware queue inclusion, editable activity entries, EOD semantics, and spreadsheet-preserving presentation.
    ======================================================================= */
-const SHEETS=['EOD','Installed (Missing Info)','Todays Dashboard','CCEW Creation ACT','Subcontractor List','RFI','RFI - Escalations','CER AuditedRejected Jobs','Installing - Install in progres','Sorted EODs','Closed Rejected CER Cases','Closed RFI Concerns','Isaac EOW','EODRFI Manual'];
-const OPERATIONAL=['EOD','Installed (Missing Info)','RFI','RFI - Escalations','CER AuditedRejected Jobs','CCEW Creation ACT','Installing - Install in progres'];
-const HEADER_ROWS={'EOD':1,'Installed (Missing Info)':1,'Todays Dashboard':3,'CCEW Creation ACT':1,'Subcontractor List':1,'RFI':2,'RFI - Escalations':2,'CER AuditedRejected Jobs':2,'Sorted EODs':1,'Closed Rejected CER Cases':1,'Closed RFI Concerns':1,'Isaac EOW':1,'EODRFI Manual':1};
-const ACTIVE_SHEETS=['EOD','Installed (Missing Info)','RFI','RFI - Escalations','CER AuditedRejected Jobs','Installing - Install in progres','CCEW Creation ACT'];
+const SHEETS=['EOD','Installed (Missing Info)','Todays Dashboard','CCEW Creation ACT','Subcontractor List','RFI','RFI - Escalations','CER Audited/Rejected Jobs','Installing - Install in progres','Sorted EODs','Closed Rejected CER Cases','Closed RFI Concerns','Isaac EOW','EODRFI Manual'];
+const OPERATIONAL=['EOD','Installed (Missing Info)','RFI','RFI - Escalations','CER Audited/Rejected Jobs','CCEW Creation ACT','Installing - Install in progres'];
+const HEADER_ROWS={'EOD':1,'Installed (Missing Info)':1,'Todays Dashboard':3,'CCEW Creation ACT':1,'Subcontractor List':1,'RFI':2,'RFI - Escalations':2,'CER Audited/Rejected Jobs':2,'Sorted EODs':1,'Closed Rejected CER Cases':1,'Closed RFI Concerns':1,'Isaac EOW':1,'EODRFI Manual':1};
+const ACTIVE_SHEETS=['EOD','Installed (Missing Info)','RFI','RFI - Escalations','CER Audited/Rejected Jobs','Installing - Install in progres','CCEW Creation ACT'];
 const ICONS={dashboard:'▦',eod:'▤',jobs:'▣',rficher:'⌁',ccew:'▤',calls:'☎',installers:'⚒',subcontractors:'♧',eow:'◫',raw:'▥'};
 const NAV=[['dashboard','Dashboard'],['eod','EOD Workbench'],['jobs','Jobs & Queue'],['rficher','RFI & CER'],['ccew','CCEW'],['calls','Customer Calls'],['installers','Installer Actions'],['subcontractors','Subcontractors'],['eow','EOW Report'],['raw','Raw Tracker']];
 let wb=null, dirty=false, query='', currentRaw='EOD', rawPage=1, rawPageSize=40;
@@ -257,7 +257,7 @@ function headerControlType(sheet,header,value){
   return '';
 }
 function requiresFollowUpDue(sheet,rowValues){
-  if(['Installed (Missing Info)','RFI','RFI - Escalations','CER AuditedRejected Jobs','Installing - Install in progres'].includes(sheet)) return true;
+  if(['Installed (Missing Info)','RFI','RFI - Escalations','CER Audited/Rejected Jobs','Installing - Install in progres'].includes(sheet)) return true;
   if(sheet==='CCEW Creation ACT'){
     const h=headerList(sheet),i=colIndex(h,['Status']);
     return norm(i>=0?rowValues[i]:'')==='pending';
@@ -345,7 +345,7 @@ function firstSafeBlankColumn(sheetName){
 }
 function ensureFollowUpDueFields(){
   if(!wb)return false;
-  const targets=['Installed (Missing Info)','RFI','RFI - Escalations','CER AuditedRejected Jobs','Installing - Install in progres','CCEW Creation ACT'];
+  const targets=['Installed (Missing Info)','RFI','RFI - Escalations','CER Audited/Rejected Jobs','Installing - Install in progres','CCEW Creation ACT'];
   let changed=false;
   for(const sheetName of targets){
     if(!wb.Sheets?.[sheetName])continue;
@@ -475,7 +475,7 @@ function sameStageDuplicates(gwtKey,recordsList){
   const m=new Map();
   for(const r of recordsList.filter(x=>x.gwt===gwtKey)){
     const wi=colIndex(r.headers,['Work Type']);
-    const component=(r.sheet==='RFI'||r.sheet==='RFI - Escalations'||r.sheet==='CER AuditedRejected Jobs')?norm(wi>=0?r.values[wi]:''):'record';
+    const component=(r.sheet==='RFI'||r.sheet==='RFI - Escalations'||r.sheet==='CER Audited/Rejected Jobs')?norm(wi>=0?r.values[wi]:''):'record';
     const key=`${r.sheet}::${component}`;
     const bucket=m.get(key)||{sheet:r.sheet,component:component||'Unspecified',count:0};
     bucket.count++;m.set(key,bucket);
@@ -485,13 +485,13 @@ function sameStageDuplicates(gwtKey,recordsList){
 function sameStageDuplicateCount(gwtKey,recordsList){return sameStageDuplicates(gwtKey,recordsList).reduce((n,x)=>n+(x.count-1),0)}
 function stagePresence(recordsList){
   const set=new Set(recordsList.map(r=>r.sheet));
-  const stages=[]; for(const s of ['Installed (Missing Info)','EOD','RFI','CER AuditedRejected Jobs'])if(set.has(s))stages.push(s);
+  const stages=[]; for(const s of ['Installed (Missing Info)','EOD','RFI','CER Audited/Rejected Jobs'])if(set.has(s))stages.push(s);
   return stages;
 }
 
 function makeJobGroup(rs,key,forceInclude=false){
   const installedRecords=rs.filter(r=>r.sheet==='Installed (Missing Info)');
-  const cerRecords=rs.filter(r=>r.sheet==='CER AuditedRejected Jobs');
+  const cerRecords=rs.filter(r=>r.sheet==='CER Audited/Rejected Jobs');
   const rfiRecords=rs.filter(r=>r.sheet==='RFI'||r.sheet==='RFI - Escalations');
   const eodRecords=rs.filter(r=>r.sheet==='EOD');
   const actRecords=rs.filter(r=>r.sheet==='CCEW Creation ACT');
@@ -532,7 +532,7 @@ function groupJobs(forceInclude=false){
 function buildGroupForGwt(gwtKey){
   const rs=allRecords().filter(r=>r.gwt===gwtKey && r.sheet!=='Todays Dashboard');
   if(!rs.length)return null;
-  return makeJobGroup(rs,gwtKey,true) || {key:gwtKey,gwt:gwtKey,customer:rs.find(r=>r.customer)?.customer||'',address:rs.find(r=>r.address)?.address||'',installer:rs.find(r=>r.installer)?.installer||'',contractor:rs.find(r=>r.contractor)?.contractor||'',source:'Reference',status:'',waiting:'',next:'Review current tracker state',due:null,priority:'Low',issues:[],records:rs,eod:rs.find(r=>r.sheet==='EOD')||null,installed:rs.find(r=>r.sheet==='Installed (Missing Info)')||null,rfi:rs.find(r=>r.sheet==='RFI'||r.sheet==='RFI - Escalations')||null,cer:rs.find(r=>r.sheet==='CER AuditedRejected Jobs')||null,act:rs.find(r=>r.sheet==='CCEW Creation ACT')||null,eodRecords:rs.filter(r=>r.sheet==='EOD'),installedRecords:rs.filter(r=>r.sheet==='Installed (Missing Info)'),rfiRecords:rs.filter(r=>r.sheet==='RFI'||r.sheet==='RFI - Escalations'),cerRecords:rs.filter(r=>r.sheet==='CER AuditedRejected Jobs'),actRecords:rs.filter(r=>r.sheet==='CCEW Creation ACT'),lodgedReview:false,eodPartial:false,currentEodOnly:true};
+  return makeJobGroup(rs,gwtKey,true) || {key:gwtKey,gwt:gwtKey,customer:rs.find(r=>r.customer)?.customer||'',address:rs.find(r=>r.address)?.address||'',installer:rs.find(r=>r.installer)?.installer||'',contractor:rs.find(r=>r.contractor)?.contractor||'',source:'Reference',status:'',waiting:'',next:'Review current tracker state',due:null,priority:'Low',issues:[],records:rs,eod:rs.find(r=>r.sheet==='EOD')||null,installed:rs.find(r=>r.sheet==='Installed (Missing Info)')||null,rfi:rs.find(r=>r.sheet==='RFI'||r.sheet==='RFI - Escalations')||null,cer:rs.find(r=>r.sheet==='CER Audited/Rejected Jobs')||null,act:rs.find(r=>r.sheet==='CCEW Creation ACT')||null,eodRecords:rs.filter(r=>r.sheet==='EOD'),installedRecords:rs.filter(r=>r.sheet==='Installed (Missing Info)'),rfiRecords:rs.filter(r=>r.sheet==='RFI'||r.sheet==='RFI - Escalations'),cerRecords:rs.filter(r=>r.sheet==='CER Audited/Rejected Jobs'),actRecords:rs.filter(r=>r.sheet==='CCEW Creation ACT'),lodgedReview:false,eodPartial:false,currentEodOnly:true};
 }
 function filteredJobs(){
   let arr=groupJobs(!!query);
@@ -552,7 +552,7 @@ function filteredJobs(){
 }
 function moduleBadges(j){
   const names=[];
-  const map={'EOD':'EOD','Installed (Missing Info)':'Installed','RFI':'RFI','RFI - Escalations':'RFI Esc.','CER AuditedRejected Jobs':'CER','CCEW Creation ACT':'ACT CCEW','Installing - Install in progres':'Installing'};
+  const map={'EOD':'EOD','Installed (Missing Info)':'Installed','RFI':'RFI','RFI - Escalations':'RFI Esc.','CER Audited/Rejected Jobs':'CER','CCEW Creation ACT':'ACT CCEW','Installing - Install in progres':'Installing'};
   for(const r of j.records){const n=map[r.sheet];if(n&&!names.includes(n))names.push(n)}
   return names.map(n=>`<span class="badge gray" style="margin:2px 3px 0 0">${esc(n)}</span>`).join('');
 }
@@ -600,7 +600,7 @@ function renderJobs(){
 function installerActionRows(){
   const out=[];
   for(const r of activeRecords()){
-    if(!['Installed (Missing Info)','RFI','RFI - Escalations','CER AuditedRejected Jobs'].includes(r.sheet))continue;
+    if(!['Installed (Missing Info)','RFI','RFI - Escalations','CER Audited/Rejected Jobs'].includes(r.sheet))continue;
     if(!norm(r.waitingOn).includes('installer'))continue;
     if(!r.followUpDue)continue;
     if(dateOnly(r.followUpDue)>today())continue;
@@ -676,7 +676,7 @@ function filterSummary(groups){
   return `<div class=\"mini-list\"><div class=\"mini-item\"><div class=\"line\"><strong>Workflow stage mix</strong><span class=\"subtle\">${groups.length} active job groups</span></div><small>Installed ${counts.Installed} · RFI ${counts.RFI} · CER ${counts.CER} · ACT CCEW ${counts.ACT} · Partial EOD ${groups.filter(j=>j.eodPartial).length}</small></div><div class=\"mini-item\"><div class=\"line\"><strong>Same-stage/component review</strong><span class=\"badge ${sameStage?'amber':'green'}\">${sameStage?'Review '+sameStage:'None'}</span></div><small>Cross-stage GWT repeats are normal. RFI PV + Battery rows are distinct components.</small></div><div class=\"mini-item\"><div class=\"line\"><strong>Lodged Review</strong><span class=\"badge ${lodgedReview?'amber':'green'}\">${lodgedReview}</span></div><small>Installed (Missing Info) still active while a full EOD lodgement record exists.</small></div><div class=\"mini-item\"><div class=\"line\"><strong>Jobs & Queue rule</strong></div><small>Fully lodged EOD-only rows are excluded. Only PV + Battery rows with Lodged PV only or Lodged Battery Only remain in the action queue.</small></div></div>`;
 }
 function seg(id,label,n){return `<button class="${app.dashboardFilter===id?'active':''}" onclick="app.dashboardFilter='${id}';renderDashboard()">${esc(label)} <b>${n}</b></button>`}
-function queueGroupFromRecord(r,sourceLabel){const issueText=[r.issue,r.blocker].filter(Boolean).join('\n');return{key:r.gwt||`${norm(r.customer)}|${norm(r.address)}`,gwt:r.gwt,customer:r.customer,address:r.address,installer:r.installer,contractor:r.contractor,source:sourceLabel,status:r.status,waiting:r.waitingOn||'',next:r.nextSteps||r.blocker||r.issue||'Review',due:r.followUpDue||null,priority:r.priority||'Medium',issues:[issueText||''],records:[r],eod:r.sheet==='EOD'?r:null,installed:r.sheet==='Installed (Missing Info)'?r:null,rfi:(r.sheet==='RFI'||r.sheet==='RFI - Escalations')?r:null,cer:r.sheet==='CER AuditedRejected Jobs'?r:null,act:r.sheet==='CCEW Creation ACT'?r:null,lodgedReview:false}}
+function queueGroupFromRecord(r,sourceLabel){const issueText=[r.issue,r.blocker].filter(Boolean).join('\n');return{key:r.gwt||`${norm(r.customer)}|${norm(r.address)}`,gwt:r.gwt,customer:r.customer,address:r.address,installer:r.installer,contractor:r.contractor,source:sourceLabel,status:r.status,waiting:r.waitingOn||'',next:r.nextSteps||r.blocker||r.issue||'Review',due:r.followUpDue||null,priority:r.priority||'Medium',issues:[issueText||''],records:[r],eod:r.sheet==='EOD'?r:null,installed:r.sheet==='Installed (Missing Info)'?r:null,rfi:(r.sheet==='RFI'||r.sheet==='RFI - Escalations')?r:null,cer:r.sheet==='CER Audited/Rejected Jobs'?r:null,act:r.sheet==='CCEW Creation ACT'?r:null,lodgedReview:false}}
 function workTable(rows){
   if(!rows.length)return `<div class="empty">Nothing currently matches this queue.</div>`;
   const body=rows.map(j=>{
@@ -706,7 +706,7 @@ function workTable(rows){
 }
 function clearFilters(){query='';app.jobFilter='all';app.dueFilter='current';renderJobs()}
 function renderRfiCer(){
-  const rf=records('RFI'),escs=records('RFI - Escalations'),cer=records('CER AuditedRejected Jobs');
+  const rf=records('RFI'),escs=records('RFI - Escalations'),cer=records('CER Audited/Rejected Jobs');
   let rows=app.rfFilter==='cer'?cer:app.rfFilter==='esc'?escs:rf;
   const counts=`RFI ${new Set(rf.map(r=>r.gwt).filter(Boolean)).size} · Escalations ${new Set(escs.map(r=>r.gwt).filter(Boolean)).size} · CER ${new Set(cer.map(r=>r.gwt).filter(Boolean)).size}`;
   $('rficher').innerHTML=`<div class="section-title"><div><h1>RFI & CER</h1><p>Work on the issue itself. EOD lodgement history remains visible on the job record but does not disappear just because an RFI exists.</p></div><div class="actions"><button onclick="quickLog('rfi')">＋ Log RFI</button><button onclick="quickLog('cer')">＋ Log CER Audit</button></div></div><div class="seg"><button class="${app.rfFilter==='all'?'active':''}" onclick="app.rfFilter='all';renderRfiCer()">RFI</button><button class="${app.rfFilter==='esc'?'active':''}" onclick="app.rfFilter='esc';renderRfiCer()">Escalations</button><button class="${app.rfFilter==='cer'?'active':''}" onclick="app.rfFilter='cer';renderRfiCer()">CER Audit</button></div><div class="banner">${esc(counts)}</div><div class="panel">${app.rfFilter==='cer'?cerTable(rows):rfiTable(rows)}</div>`
@@ -995,7 +995,7 @@ function saveEditedRow(sheet,row){
     if(sheet==='EOD'&&normHeader(h[i])==='jobtype'&&eodJobTypeFormulaContainsRow(row))continue;
     setCellPreserve(ws,row,i,vals[i]);
   }
-  dirty=true;resetCache();closeModal();renderView();const r=records(sheet).find(x=>x.row===row);if(r?.gwt)openJob(r.gwt,sheet==='RFI'||sheet==='CER AuditedRejected Jobs'?'activity':sheet==='EOD'?'eod':'overview')
+  dirty=true;resetCache();closeModal();renderView();const r=records(sheet).find(x=>x.row===row);if(r?.gwt)openJob(r.gwt,sheet==='RFI'||sheet==='CER Audited/Rejected Jobs'?'activity':sheet==='EOD'?'eod':'overview')
 }
 function confirmDeleteRow(sheet,row){
   if(sheetHasFormulaCells(sheet)){
@@ -1008,7 +1008,7 @@ function confirmDeleteRow(sheet,row){
 function closeModal(){$('modal').classList.remove('open')}
 function quickLog(type,gwtKey=''){openQuickModal(type,gwtKey)}
 function openQuickModal(type,gwtKey=''){
-  const presets={installed:['Installed (Missing Info)','Log New Installed / Missing Info Job'],rfi:['RFI','Log New RFI'],cer:['CER AuditedRejected Jobs','Log CER Audited / Rejected Job'],act:['CCEW Creation ACT','Log ACT CCEW Record'],call:['Installed (Missing Info)','Log Customer Call / Activity'],update:['Installed (Missing Info)','Add Update'],message:['Installed (Missing Info)','Draft Installer Message'],eod:['EOD','Log EOD Job']};
+  const presets={installed:['Installed (Missing Info)','Log New Installed / Missing Info Job'],rfi:['RFI','Log New RFI'],cer:['CER Audited/Rejected Jobs','Log CER Audited / Rejected Job'],act:['CCEW Creation ACT','Log ACT CCEW Record'],call:['Installed (Missing Info)','Log Customer Call / Activity'],update:['Installed (Missing Info)','Add Update'],message:['Installed (Missing Info)','Draft Installer Message'],eod:['EOD','Log EOD Job']};
   if(type==='message'){draftInstallerMessage(gwtKey||app.selectedGwt||'');return}
   if(type==='eod'){openEodLogModal(gwtKey);return}
   const [sheet,title]=presets[type]||presets.installed;const h=headerList(sheet);const current=gwtKey?allRecords().find(r=>r.gwt===gwtKey&&r.sheet===sheet):null;
@@ -1030,14 +1030,14 @@ function saveQuickJob(type,sheet){
   if(['rfi','cer'].includes(type) && !data['Work Type']){alert('Select the Work Type.');return}
   if(['installed','rfi','cer'].includes(type) && !data['Issue']){alert('Enter the current Issue.');return}
   let sameSheet=[];
-  if(sheet==='RFI'||sheet==='RFI - Escalations'||sheet==='CER AuditedRejected Jobs'){
+  if(sheet==='RFI'||sheet==='RFI - Escalations'||sheet==='CER Audited/Rejected Jobs'){
     const workType=norm(data['Work Type']||'');sameSheet=records(sheet).filter(r=>{const wi=colIndex(r.headers,['Work Type']);const rwt=norm(wi>=0?r.values[wi]:'');const idMatch=G&&r.gwt===G;const siteMatch=cust&&addr&&norm(r.customer)===norm(cust)&&norm(r.address)===norm(addr);return(idMatch||siteMatch)&&(!workType||rwt===workType)});
   }else if(sheet==='EOD'){
     const date=data['Date']||'';sameSheet=records(sheet).filter(r=>G&&r.gwt===G&&(!date||isoDate(r.effectiveDate)===date));
   }else sameSheet=records(sheet).filter(r=>((G&&r.gwt===G)||(cust&&addr&&norm(r.customer)===norm(cust)&&norm(r.address)===norm(addr))));
   if(sameSheet.length){const list=sameSheet.slice(0,8).map(r=>`${r.gwt||'—'} · ${sheet} row ${r.row}${colIndex(r.headers,['Work Type'])>=0?' · '+display(r.values[colIndex(r.headers,['Work Type'])]):''} · ${r.customer}`).join('\n');if(!confirm(`Possible existing record(s) in the same workflow/component:\n\n${list}\n\nCreate another record anyway?`))return}
   const row=new Array(h.length).fill('');for(let i=0;i<h.length;i++){const header=h[i],hn=normHeader(header);let v='';if(type==='cer'&&hn==='status')v='Rejected';else if(data[header]!=null)v=data[header];else if(hn==='gwtid')v=G;else if(hn==='customername')v=cust;else if(hn==='address')v=addr;else if(hn==='waitingon')v=data['Waiting on']||'';else if(hn==='blocker')v=data['Blocker']||'';else if(hn==='issue'||hn==='missinginfoissue')v=data['Issue']||'';else if(hn==='worktype')v=data['Work Type']||'';else if(hn==='jobtype')v=data['Job Type']||'';else if(hn==='installcompletedate')v=data['Install Complete Date']||'';else if(hn==='followupdue')v=data['Follow Up Due']||'';else if(hn==='coesref')v=data['COES REF']||'';row[i]=coerce(header,v)}
-  appendRow(sheet,row);dirty=true;resetCache();closeModal();show(sheet==='RFI'||sheet==='RFI - Escalations'||sheet==='CER AuditedRejected Jobs'?'rficher':sheet==='CCEW Creation ACT'?'ccew':'jobs');if(G)openJob(G,'activity',sheet)
+  appendRow(sheet,row);dirty=true;resetCache();closeModal();show(sheet==='RFI'||sheet==='RFI - Escalations'||sheet==='CER Audited/Rejected Jobs'?'rficher':sheet==='CCEW Creation ACT'?'ccew':'jobs');if(G)openJob(G,'activity',sheet)
 }
 function saveActLog(){
   const h=headerList('CCEW Creation ACT');const G=gwt($('actGwt').value),cust=$('actCustomer').value.trim(),contractor=$('actContractor').value.trim(),coes=$('actCoes').value.trim(),status=$('actStatus').value,followUp=$('actFollowUpDue')?.value||'';
@@ -1056,7 +1056,7 @@ function pickActivityRecord(g,k,sheetHint='',rowHint=0){
   if(sheetHint){const exact=candidates.filter(x=>x.sheet===sheetHint);if(exact.length===1)return exact[0]}
   const j=buildGroupForGwt(g);
   if(j){const preferred=j.source==='RFI'?j.rfi:j.source==='CER Audit'?j.cer:j.source==='Installed / Missing Info'?j.installed:j.source==='ACT CCEW'?j.act:j.eod;if(preferred&&(!sheetHint||preferred.sheet===sheetHint))return preferred}
-  const desired=k==='issue'?['RFI','RFI - Escalations','CER AuditedRejected Jobs','Installed (Missing Info)']:k==='next'?['RFI','RFI - Escalations','CER AuditedRejected Jobs','Installed (Missing Info)']:['Installed (Missing Info)','RFI','RFI - Escalations','CER AuditedRejected Jobs','CCEW Creation ACT'];
+  const desired=k==='issue'?['RFI','RFI - Escalations','CER Audited/Rejected Jobs','Installed (Missing Info)']:k==='next'?['RFI','RFI - Escalations','CER Audited/Rejected Jobs','Installed (Missing Info)']:['Installed (Missing Info)','RFI','RFI - Escalations','CER Audited/Rejected Jobs','CCEW Creation ACT'];
   const eligible=candidates.filter(x=>desired.includes(x.sheet)&&colIndex(x.headers,k==='issue'?['ISSUE','Issue','Missing Info/Issue']:k==='next'?['Next steps','Next Step']:['Activity Log / Update','Activity Log','UPDATE','Actions Taken'])>=0);
   if(eligible.length===1)return eligible[0];
   return null;
@@ -1081,15 +1081,15 @@ function saveDueEditor(sheet,row){
   setCellPreserve(wb.Sheets[sheet],row,idx,parseExcelDate(v)||v);dirty=true;resetCache();closeModal();renderView();
 }
 
-function renderDrawer(){const j=selectedGroup();if(!j){closeDrawer();return}const tabs=[['overview','Overview'],['activity','Activity'],['edit','Edit'],['eod','EOD'],['history','History']];const currentStage=app.drawerContextSheet || (j.source==='RFI'?'RFI':j.source==='CER Audit'?'CER AuditedRejected Jobs':j.source);$('drawerBody').innerHTML=`<div class="drawer-head"><div><div class="gwt">${esc(j.gwt||'No GWT')}</div><h2>${esc(j.customer)}</h2><div class="address">${esc(j.address)}</div><div class="stage-strip">${esc(currentStage||'Workflow')}</div></div><button class="icon" onclick="closeDrawer()">✕</button></div><div class="drawer-tabs">${tabs.map(([id,l])=>`<button class="${app.drawerTab===id?'active':''}" onclick="app.drawerTab='${id}';renderDrawer()">${l}</button>`).join('')}</div>${app.drawerTab==='overview'?drawerOverview(j):app.drawerTab==='activity'?drawerActivity(j):app.drawerTab==='edit'?drawerEdit(j):app.drawerTab==='eod'?drawerEod(j):drawerHistory(j)}`}
+function renderDrawer(){const j=selectedGroup();if(!j){closeDrawer();return}const tabs=[['overview','Overview'],['activity','Activity'],['edit','Edit'],['eod','EOD'],['history','History']];const currentStage=app.drawerContextSheet || (j.source==='RFI'?'RFI':j.source==='CER Audit'?'CER Audited/Rejected Jobs':j.source);$('drawerBody').innerHTML=`<div class="drawer-head"><div><div class="gwt">${esc(j.gwt||'No GWT')}</div><h2>${esc(j.customer)}</h2><div class="address">${esc(j.address)}</div><div class="stage-strip">${esc(currentStage||'Workflow')}</div></div><button class="icon" onclick="closeDrawer()">✕</button></div><div class="drawer-tabs">${tabs.map(([id,l])=>`<button class="${app.drawerTab===id?'active':''}" onclick="app.drawerTab='${id}';renderDrawer()">${l}</button>`).join('')}</div>${app.drawerTab==='overview'?drawerOverview(j):app.drawerTab==='activity'?drawerActivity(j):app.drawerTab==='edit'?drawerEdit(j):app.drawerTab==='eod'?drawerEod(j):drawerHistory(j)}`}
 function stageList(j){
-  const set=new Set(j.records.map(r=>r.sheet)); const stages=['Installed (Missing Info)','EOD','RFI','CER AuditedRejected Jobs'];
+  const set=new Set(j.records.map(r=>r.sheet)); const stages=['Installed (Missing Info)','EOD','RFI','CER Audited/Rejected Jobs'];
   const active=[];for(const s of stages)if(set.has(s))active.push(s);
-  return active.map((s,i)=>`${i?'<span class="stage-arrow">→</span>':''}<span class="stage active">${s==='CER AuditedRejected Jobs'?'CER Audit':s}</span>`).join('')||'<span class="stage">No workflow stage identified</span>'
+  return active.map((s,i)=>`${i?'<span class="stage-arrow">→</span>':''}<span class="stage active">${s==='CER Audited/Rejected Jobs'?'CER Audit':s}</span>`).join('')||'<span class="stage">No workflow stage identified</span>'
 }
 function drawerContextCards(j,r){
-  const stage=app.drawerContextSheet || (j.source==='RFI'?'RFI':j.source==='CER Audit'?'CER AuditedRejected Jobs':j.source);
-  if(stage==='RFI'||stage==='CER AuditedRejected Jobs'){
+  const stage=app.drawerContextSheet || (j.source==='RFI'?'RFI':j.source==='CER Audit'?'CER Audited/Rejected Jobs':j.source);
+  if(stage==='RFI'||stage==='CER Audited/Rejected Jobs'){
     const arr=stage==='RFI'?j.rfiRecords:j.cerRecords;
     if(arr.length>1){
       return arr.map(rec=>{const wi=colIndex(rec.headers,['Work Type']);const label=wi>=0?display(rec.values[wi]):'Workflow component';return `<div class="context-card"><div class="title">${esc(label)} · row ${rec.row}</div><div class="body"><b>Issue</b><br>${esc(rec.issue||'—')}<br><br><b>Latest Update</b><br>${esc(rec.update?latestHistoryText(rec.update):'—')}<br><br><b>Next Steps</b><br>${esc(rec.nextSteps||'—')}</div></div>`}).join('');
@@ -1104,8 +1104,8 @@ function drawerContextCards(j,r){
 function drawerOverview(j){
   const r=contextRecord(j);
   const contextStage=app.drawerContextSheet || '';
-  const stageForView=contextStage || (j.source==='RFI'?'RFI':j.source==='CER Audit'?'CER AuditedRejected Jobs':j.source);
-  const isIssueStage=stageForView==='RFI'||stageForView==='CER AuditedRejected Jobs';
+  const stageForView=contextStage || (j.source==='RFI'?'RFI':j.source==='CER Audit'?'CER Audited/Rejected Jobs':j.source);
+  const isIssueStage=stageForView==='RFI'||stageForView==='CER Audited/Rejected Jobs';
   const eod=j.eod, dup=sameStageDuplicates(j.gwt,j.records);
   const lodge=eod?requiredLodgeChecks(eod):null;
   const checks=[
@@ -1176,14 +1176,14 @@ function drawerActivity(j){
   }
   const typeOrder={'Customer Call':0,'Installer Contact':1,'Internal Update':2,'Customer Commitment':3,'Issue':4,'Next Steps':5,'EOD':6,'Update':7};
   const sorted=[...days.entries()].sort((a,b)=>{if(a[0]==='undated')return 1;if(b[0]==='undated')return -1;return new Date(b[0])-new Date(a[0])});
-  const s=contextSheet || (j.source==='RFI'?'RFI':j.source==='CER Audit'?'CER AuditedRejected Jobs':j.source==='Installed / Missing Info'?'Installed (Missing Info)':j.source==='ACT CCEW'?'CCEW Creation ACT':'');
+  const s=contextSheet || (j.source==='RFI'?'RFI':j.source==='CER Audit'?'CER Audited/Rejected Jobs':j.source==='Installed / Missing Info'?'Installed (Missing Info)':j.source==='ACT CCEW'?'CCEW Creation ACT':'');
   const duplicateNote=duplicatesHidden?`<span class="activity-duplicate-note">${duplicatesHidden} exact duplicate event(s) hidden from the display; spreadsheet history is unchanged.</span>`:'';
   return `<div class="activity-toolbar"><button class="primary" onclick="activityPrompt('${esc(j.gwt)}','update','${esc(s)}')">＋ Update</button><button onclick="activityPrompt('${esc(j.gwt)}','issue','${esc(s)}')">＋ Issue</button><button onclick="activityPrompt('${esc(j.gwt)}','next','${esc(s)}')">＋ Next Steps</button><span class="subtle">Today's Dashboard is reference-only and excluded. Exact duplicate events are collapsed for readability.</span>${duplicateNote}</div><div class="timeline">${sorted.length?sorted.map(([d,items])=>{items.sort((a,b)=>(typeOrder[a.type]??9)-(typeOrder[b.type]??9));const undated=d==='undated';return `<div class="activity-day ${undated?'activity-undated':''}"><div class="activity-day-head"><div><strong>${undated?'Date not recorded':fmtDateLong(parseExcelDate(d))}</strong><div class="activity-day-sub">${undated?'No date was recorded in the source field':'Chronological case activity'}</div></div><span class="subtle">${items.length} event(s)</span></div>${items.map(x=>`<div class="activity-entry"><div class="atype">${esc(x.type)}</div><div class="atext">${esc(x.text)}</div><div class="activity-source">${esc(x.sheet)} · row ${x.sheetRow}</div><button class="small activity-edit-btn" onclick="event.stopPropagation();editActivityItem(${x.editIndex})">Edit</button></div>`).join('')}</div>`}).join(''):`<div class="empty">No activity found.</div>`}</div>`
 }
 function activityPrompt(gwtKey,kind,sheetHint='',rowHint=0){
   const title=kind==='issue'?'Add Issue':kind==='next'?'Add Next Steps':'Add Update';
   const j=buildGroupForGwt(gwtKey);
-  const sourceSheet=sheetHint || (j?.source==='RFI'?'RFI':j?.source==='CER Audit'?'CER AuditedRejected Jobs':j?.source==='Installed / Missing Info'?'Installed (Missing Info)':j?.source==='ACT CCEW'?'CCEW Creation ACT':'');
+  const sourceSheet=sheetHint || (j?.source==='RFI'?'RFI':j?.source==='CER Audit'?'CER Audited/Rejected Jobs':j?.source==='Installed / Missing Info'?'Installed (Missing Info)':j?.source==='ACT CCEW'?'CCEW Creation ACT':'');
   let candidates=(j?.records||[]).filter(r=>!sourceSheet||r.sheet===sourceSheet);
   const targetHeader=kind==='issue'?['ISSUE','Issue','Missing Info/Issue']:kind==='next'?['Next steps','Next Step']:['Activity Log / Update','Activity Log','UPDATE','Actions Taken'];
   candidates=candidates.filter(r=>colIndex(r.headers,targetHeader)>=0);
@@ -1201,10 +1201,10 @@ function openIssueEditor(sheet,row){
 function saveIssueEditor(sheet,row){const r=records(sheet).find(x=>x.row===row);if(!r)return;const idx=colIndex(r.headers,['ISSUE','Issue','Missing Info/Issue']);if(idx<0){alert('Issue field not found.');return}const v=$('issueEdit').value.trim();if(!v){if(!confirm('Clear the Issue field?'))return}setCellPreserve(wb.Sheets[sheet],row,idx,v);dirty=true;resetCache();closeModal();renderView();if(r.gwt)openJob(r.gwt,'activity')}
 function drawerEdit(j){
   const contextSheet=app.drawerContextSheet;
-  const stageSheet=contextSheet || ({'RFI':'RFI','CER Audit':'CER AuditedRejected Jobs','Installed / Missing Info':'Installed (Missing Info)','ACT CCEW':'CCEW Creation ACT','EOD':'EOD'}[j.source]||j.currentRecord?.sheet||'');
+  const stageSheet=contextSheet || ({'RFI':'RFI','CER Audit':'CER Audited/Rejected Jobs','Installed / Missing Info':'Installed (Missing Info)','ACT CCEW':'CCEW Creation ACT','EOD':'EOD'}[j.source]||j.currentRecord?.sheet||'');
   const stageRecords=j.records.filter(r=>r.sheet!=='Todays Dashboard' && (!stageSheet || r.sheet===stageSheet));
   const recordsToShow=stageRecords.length?stageRecords:(j.currentRecord?[j.currentRecord]:[]);
-  return`<div class="notice-card"><h4>Correct workflow record</h4><p>Editing from Jobs & Queue writes to the actual operational sheet for the current stage. Today's Dashboard is reference-only and is never used for job activity or edits.</p></div><div class="drawer-section">${recordsToShow.map(r=>`<div class="mini-item"><div class="line"><strong>${esc(r.sheet)} · row ${r.row}</strong><span class="subtle">${esc(r.issue||r.status||r.jobType||'')}</span></div><div class="address" style="margin-top:4px">${esc(r.customer)}${r.address?` · ${esc(r.address)}`:''}</div><div class="actions" style="margin-top:7px"><button class="small" onclick="openRowEditor('${esc(r.sheet)}',${r.row})">Edit Row</button>${r.sheet==='RFI'||r.sheet==='CER AuditedRejected Jobs'?`<button class="small" onclick="openIssueEditor('${esc(r.sheet)}',${r.row})">Edit Issue</button><button class="small" onclick="editLatestActivity('${esc(r.sheet)}',${r.row},'update')">Edit Update</button>`:''}${['Installed (Missing Info)','RFI','RFI - Escalations','CER AuditedRejected Jobs'].includes(r.sheet)?`<button class="small" onclick="openDueEditor('${esc(r.gwt)}','${esc(r.sheet)}',${r.row})">Edit Follow-Up</button>`:''}</div></div>`).join('')||`<div class="empty">No editable operational record found for this job.</div>`}</div>`
+  return`<div class="notice-card"><h4>Correct workflow record</h4><p>Editing from Jobs & Queue writes to the actual operational sheet for the current stage. Today's Dashboard is reference-only and is never used for job activity or edits.</p></div><div class="drawer-section">${recordsToShow.map(r=>`<div class="mini-item"><div class="line"><strong>${esc(r.sheet)} · row ${r.row}</strong><span class="subtle">${esc(r.issue||r.status||r.jobType||'')}</span></div><div class="address" style="margin-top:4px">${esc(r.customer)}${r.address?` · ${esc(r.address)}`:''}</div><div class="actions" style="margin-top:7px"><button class="small" onclick="openRowEditor('${esc(r.sheet)}',${r.row})">Edit Row</button>${r.sheet==='RFI'||r.sheet==='CER Audited/Rejected Jobs'?`<button class="small" onclick="openIssueEditor('${esc(r.sheet)}',${r.row})">Edit Issue</button><button class="small" onclick="editLatestActivity('${esc(r.sheet)}',${r.row},'update')">Edit Update</button>`:''}${['Installed (Missing Info)','RFI','RFI - Escalations','CER Audited/Rejected Jobs'].includes(r.sheet)?`<button class="small" onclick="openDueEditor('${esc(r.gwt)}','${esc(r.sheet)}',${r.row})">Edit Follow-Up</button>`:''}</div></div>`).join('')||`<div class="empty">No editable operational record found for this job.</div>`}</div>`
 }
 function drawerEod(j){
   if(!j.eod)return`<div class="empty">No EOD row found for this GWT.</div>`;
@@ -1219,11 +1219,11 @@ function quickSearchJobs(){show('jobs')}
 function statusLine(){const d=document.querySelector('.side-bottom #sideStatus');if(d)d.innerHTML=wb?`Loaded: ${wb.SheetNames.length} sheets<br><span style="color:${dirty?'#ffd89a':'#91b8d8'}">${dirty?'● Unsaved changes':'● No unsaved changes'}</span>`:'No tracker loaded'}
 function renderSubtle(){statusLine()}
 function validateWorkbookStructure(){
-  const required=['EOD','Installed (Missing Info)','RFI','CER AuditedRejected Jobs','CCEW Creation ACT','Subcontractor List','Isaac EOW'];
+  const required=['EOD','Installed (Missing Info)','RFI','CER Audited/Rejected Jobs','CCEW Creation ACT','Subcontractor List','Isaac EOW'];
   const missing=required.filter(s=>!wb?.Sheets?.[s]);
   const warnings=[];
   if(missing.length) warnings.push('Missing expected sheet(s): '+missing.join(', '));
-  for(const s of ['RFI','CER AuditedRejected Jobs']){const h=headerList(s);if(colIndex(h,['GWT ID'])<0||colIndex(h,['Customer Name'])<0||colIndex(h,['Address'])<0)warnings.push(`${s} header row could not be mapped reliably.`);}
+  for(const s of ['RFI','CER Audited/Rejected Jobs']){const h=headerList(s);if(colIndex(h,['GWT ID'])<0||colIndex(h,['Customer Name'])<0||colIndex(h,['Address'])<0)warnings.push(`${s} header row could not be mapped reliably.`);}
   return {ok:true,warnings};
 }
 function importWorkbook(file){if(!window.XLSX){alert('Spreadsheet engine failed to load. Check your browser connection to the SheetJS CDN.');return}const reader=new FileReader();reader.onload=()=>{const prev={wb,dirty,cache,currentRaw,rawPage,eodDate:app.eodDate,eowWeekEnd:app.eowWeekEnd,eowDraft:app.eowDraft};try{const data=reader.result;const parsed=XLSX.read(data,{type:'array',cellDates:true,cellNF:true,cellStyles:true,bookVBA:true});wb=parsed;const jobTypeChanged=materializeEodJobTypeFormula();resetCache();const structure=validateWorkbookStructure();if(!structure.ok)throw new Error('Workbook structure validation failed.');const structureChanged=ensureFollowUpDueFields();dirty=!!(structureChanged||jobTypeChanged);currentRaw=wb.SheetNames.includes('EOD')?'EOD':wb.SheetNames[0];rawPage=1;app.eodDate=isoDate(today());app.eowWeekEnd=isoDate(endOfWeek(today()));app.eowDraft=null;statusLine();renderView();}catch(err){wb=prev.wb;dirty=prev.dirty;cache=prev.cache;currentRaw=prev.currentRaw;rawPage=prev.rawPage;app.eodDate=prev.eodDate;app.eowWeekEnd=prev.eowWeekEnd;app.eowDraft=prev.eowDraft;statusLine();console.error(err);alert('Import failed: '+(err&&err.message?err.message:err)+'\n\nNo workbook changes were applied.')}};reader.onerror=()=>alert('Could not read the selected workbook.');reader.readAsArrayBuffer(file)}
@@ -1237,7 +1237,7 @@ function applyKeyRuleChecks(){
   for(const s of SHEETS){const h=headerList(s);if((HEADER_ROWS[s]||1)>1&&!h.length)errs.push(`No headers read for ${s}`)}
   const eod=records('EOD');if(eod.length&&eod.some(r=>!r.gwt&&!r.customer))errs.push('EOD index included a blank record');
   const rfi=records('RFI');if(rfi.length&&rfi.every(r=>!r.gwt))errs.push('RFI header-row/index mismatch');
-  const cer=records('CER AuditedRejected Jobs');if(cer.length&&cer.every(r=>!r.gwt))errs.push('CER header-row/index mismatch');
+  const cer=records('CER Audited/Rejected Jobs');if(cer.length&&cer.every(r=>!r.gwt))errs.push('CER header-row/index mismatch');
   return errs;
 }
 attachGlobal();renderView();
@@ -1397,7 +1397,7 @@ attachGlobal();renderView();
     if(s.includes('inspector')||s.includes('esv')||s.includes('cer')||s.includes('greendeal')||s.includes('rep'))return 'GreenDeal / CER';
     if(s.includes('internal')||s.includes('resinc')||s.includes('connection'))return 'Internal';
     if(r?.sheet==='CCEW Creation ACT')return 'Internal';
-    if(r?.sheet==='RFI'||r?.sheet==='RFI - Escalations'||r?.sheet==='CER AuditedRejected Jobs')return 'GreenDeal / CER';
+    if(r?.sheet==='RFI'||r?.sheet==='RFI - Escalations'||r?.sheet==='CER Audited/Rejected Jobs')return 'GreenDeal / CER';
     return r?.installer?'Installer':'Review owner';
   }
   const baseMakeJobGroupV16=makeJobGroup;
@@ -1546,7 +1546,7 @@ attachGlobal();renderView();
     }
     return [...groups.entries()].map(([key,rs])=>{
       const activeRs=rs.filter(r=>ACTIVE_SHEETS.includes(r.sheet));
-      const j=(activeRs.length?makeJobGroup(activeRs,key,true):null)||{key,gwt:rs.find(r=>r.gwt)?.gwt||'',customer:rs.find(r=>r.customer)?.customer||'',address:rs.find(r=>r.address)?.address||'',installer:rs.find(r=>r.installer)?.installer||'',contractor:rs.find(r=>r.contractor)?.contractor||'',records:rs,source:'Reference',eod:rs.find(r=>r.sheet==='EOD')||null,installed:rs.find(r=>r.sheet==='Installed (Missing Info)')||null,rfi:rs.find(r=>r.sheet==='RFI'||r.sheet==='RFI - Escalations')||null,cer:rs.find(r=>r.sheet==='CER AuditedRejected Jobs')||null,act:rs.find(r=>r.sheet==='CCEW Creation ACT')||null,eodRecords:rs.filter(r=>r.sheet==='EOD'),installedRecords:rs.filter(r=>r.sheet==='Installed (Missing Info)'),rfiRecords:rs.filter(r=>r.sheet==='RFI'||r.sheet==='RFI - Escalations'),cerRecords:rs.filter(r=>r.sheet==='CER AuditedRejected Jobs'),actRecords:rs.filter(r=>r.sheet==='CCEW Creation ACT')};
+      const j=(activeRs.length?makeJobGroup(activeRs,key,true):null)||{key,gwt:rs.find(r=>r.gwt)?.gwt||'',customer:rs.find(r=>r.customer)?.customer||'',address:rs.find(r=>r.address)?.address||'',installer:rs.find(r=>r.installer)?.installer||'',contractor:rs.find(r=>r.contractor)?.contractor||'',records:rs,source:'Reference',eod:rs.find(r=>r.sheet==='EOD')||null,installed:rs.find(r=>r.sheet==='Installed (Missing Info)')||null,rfi:rs.find(r=>r.sheet==='RFI'||r.sheet==='RFI - Escalations')||null,cer:rs.find(r=>r.sheet==='CER Audited/Rejected Jobs')||null,act:rs.find(r=>r.sheet==='CCEW Creation ACT')||null,eodRecords:rs.filter(r=>r.sheet==='EOD'),installedRecords:rs.filter(r=>r.sheet==='Installed (Missing Info)'),rfiRecords:rs.filter(r=>r.sheet==='RFI'||r.sheet==='RFI - Escalations'),cerRecords:rs.filter(r=>r.sheet==='CER Audited/Rejected Jobs'),actRecords:rs.filter(r=>r.sheet==='CCEW Creation ACT')};
       j.searchRecords=rs; j.truth=truthForJob(j); j.company=companyForRecord(j.currentRecord||j.installed||j.rfi||j.cer||j.eod||rs[0]);
       const exact=gwt(key)===nq || norm(j.customer)===nq || norm(j.address)===nq || norm(j.company)===nq;
       return {job:j,exact};
@@ -1779,7 +1779,7 @@ attachGlobal();renderView();
     $('installers').innerHTML=`<div class="section-title"><div><h1>Installer Actions</h1><p>Only installer-owned work is shown. Company and route are resolved before a draft is generated.</p></div><div class="actions"><button class="primary" onclick="draftInstallerMessage()">✉ Draft Message</button></div></div><div class="banner">For any new site photos, geotagging + timestamp are non-negotiable. Closed/locked GreenDeal jobs require Timestamp Camera Enterprise and original evidence sent directly to Isaac.</div><div class="panel">${rows.length?`<div class="table-wrap"><table class="data-table"><thead><tr><th>Company</th><th>Installer</th><th>GWT</th><th>Customer</th><th>Need</th><th>Route</th><th>Due</th><th></th></tr></thead><tbody>${rows.map(r=>`<tr onclick="openJob('${esc(r.gwt)}','overview','${esc(r.sheet)}',${r.row})"><td>${esc(r.company||'—')}</td><td>${esc(r.installer||'—')}</td><td class="gwt">${esc(r.gwt)}</td><td><div class="customer">${esc(r.customer)}</div><div class="address">${esc(r.address)}</div></td><td class="wraptext">${esc(r.action||actionTextForRecord(r))}</td><td class="wraptext">${esc(r.route)}</td><td>${r.followUpDue?fmtDate(r.followUpDue):'—'}</td><td><button class="small" onclick="event.stopPropagation();draftInstallerMessage('${esc(r.gwt)}')">Draft</button></td></tr>`).join('')}</tbody></table></div>`:'<div class="empty">No installer-owned action items are currently due.</div>'}</div>`;
   }
 
-  function renderDrawerV16(){const j=selectedGroup();if(!j){closeDrawer();return}const tabs=[['overview','Overview'],['activity','Activity'],['edit','Edit'],['eod','EOD'],['history','History']];const currentStage=app.drawerContextSheet || (j.source==='RFI'?'RFI':j.source==='CER Audit'?'CER AuditedRejected Jobs':j.source);$('drawerBody').innerHTML=`<div class="drawer-head"><div><div class="gwt">${esc(j.gwt||'No GWT')}</div><h2>${esc(j.customer)}</h2><div class="address">${esc(j.address)}</div><div class="stage-strip">${esc(currentStage||'Operational Truth')}</div></div><button class="icon" onclick="closeDrawer()">✕</button></div><div class="drawer-tabs">${tabs.map(([id,l])=>`<button class="${app.drawerTab===id?'active':''}" onclick="app.drawerTab='${id}';renderDrawer()">${l}</button>`).join('')}</div>${app.drawerTab==='overview'?drawerOverviewV16(j):app.drawerTab==='activity'?drawerActivity(j):app.drawerTab==='edit'?drawerEdit(j):app.drawerTab==='eod'?drawerEod(j):drawerHistory(j)}`}
+  function renderDrawerV16(){const j=selectedGroup();if(!j){closeDrawer();return}const tabs=[['overview','Overview'],['activity','Activity'],['edit','Edit'],['eod','EOD'],['history','History']];const currentStage=app.drawerContextSheet || (j.source==='RFI'?'RFI':j.source==='CER Audit'?'CER Audited/Rejected Jobs':j.source);$('drawerBody').innerHTML=`<div class="drawer-head"><div><div class="gwt">${esc(j.gwt||'No GWT')}</div><h2>${esc(j.customer)}</h2><div class="address">${esc(j.address)}</div><div class="stage-strip">${esc(currentStage||'Operational Truth')}</div></div><button class="icon" onclick="closeDrawer()">✕</button></div><div class="drawer-tabs">${tabs.map(([id,l])=>`<button class="${app.drawerTab===id?'active':''}" onclick="app.drawerTab='${id}';renderDrawer()">${l}</button>`).join('')}</div>${app.drawerTab==='overview'?drawerOverviewV16(j):app.drawerTab==='activity'?drawerActivity(j):app.drawerTab==='edit'?drawerEdit(j):app.drawerTab==='eod'?drawerEod(j):drawerHistory(j)}`}
   renderDrawer=renderDrawerV16;
 
   // Replace dashboard/jobs/subcontractors/installers/CCEW/EOD renderers with V16 intelligence.
@@ -2007,7 +2007,7 @@ attachGlobal();renderView();
     state.syncing=true;state.lastError='';updateGoogleUi();
     try{
       const parsed=await loadGoogleWorkbook();
-      const expected=['EOD','Installed (Missing Info)','RFI','RFI - Escalations','CER AuditedRejected Jobs','CCEW Creation ACT','Subcontractor List'];
+      const expected=['EOD','Installed (Missing Info)','RFI','RFI - Escalations','CER Audited/Rejected Jobs','CCEW Creation ACT','Subcontractor List'];
       const missing=expected.filter(s=>!parsed.Sheets[s]);
       if(missing.length)throw new Error('The Google Sheet is missing required tab(s): '+missing.join(', '));
       adoptGoogleWorkbook(parsed);state.connected=true;state.syncing=false;state.lastSyncAt=Date.now();log(`Connected to “${state.spreadsheetTitle}”`, 'success');startAutoSync();
