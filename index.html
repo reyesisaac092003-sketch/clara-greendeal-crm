@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Clara — Green Deal Tracker V16</title>
+<title>Clara — Green Deal Tracker V18</title>
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <script>/** @type {any} */ var XLSX = globalThis['XLSX'];</script>
@@ -1806,7 +1806,7 @@ attachGlobal();renderView();
 
 
 /* ======================================================================
-   CLARA GREEN DEAL TRACKER — V17 DIRECT GOOGLE SHEETS CONNECTOR
+   CLARA GREEN DEAL TRACKER — V18 DIRECT GOOGLE SHEETS CONNECTOR
    Direct browser integration: Google Identity Services token client +
    Google Sheets REST API. No Apps Script / no backend.
    - Google remains the operational source of truth.
@@ -1816,7 +1816,7 @@ attachGlobal();renderView();
    - OAuth access tokens live only in browser memory; configuration is local.
    ====================================================================== */
 (function(){
-  const GKEY='claraGoogleDirectConfigV17';
+  const GKEY='claraGoogleDirectConfigV18';
   const GSI_SCOPE='https://www.googleapis.com/auth/spreadsheets';
   const READ_CHUNK=5000;
   const READ_BATCH_RANGES=12;
@@ -2007,7 +2007,7 @@ attachGlobal();renderView();
     state.syncing=true;state.lastError='';updateGoogleUi();
     try{
       const parsed=await loadGoogleWorkbook();
-      const expected=['EOD','Installed (Missing Info)','RFI','CER AuditedRejected Jobs','CCEW Creation ACT','Subcontractor List'];
+      const expected=['EOD','Installed (Missing Info)','RFI','RFI - Escalations','CER AuditedRejected Jobs','CCEW Creation ACT','Subcontractor List'];
       const missing=expected.filter(s=>!parsed.Sheets[s]);
       if(missing.length)throw new Error('The Google Sheet is missing required tab(s): '+missing.join(', '));
       adoptGoogleWorkbook(parsed);state.connected=true;state.syncing=false;state.lastSyncAt=Date.now();log(`Connected to “${state.spreadsheetTitle}”`, 'success');startAutoSync();
