@@ -641,7 +641,7 @@ function recentActivity(){
 }
 function renderDashboard(){
   const groups=groupJobs();const cer=groups.filter(j=>j.source==='CER Audit');const rfi=groups.filter(j=>j.source==='RFI');const inst=groups.filter(j=>j.source==='Installed / Missing Info');const ccew=groups.filter(j=>j.source==='ACT CCEW');const calls=customerCallRows();const installerRows=installerActionRows();const overdue=groups.filter(j=>j.due&&dateOnly(j.due)<today());const missingDue=groups.filter(j=>j.currentRecord&&requiresFollowUpDue(j.currentRecord.sheet,j.currentRecord.values)&&!j.due);const dueNow=groups.filter(j=>(j.eodPartial)||((j.due&&dateOnly(j.due)<=today()))||j.lodgedReview);
-  let rows=app.dashboardFilter==='due'?dueNow:app.dashboardFilter==='all'?groups:app.dashboardFilter==='cer'?cer:app.dashboardFilter==='rfi'?rfi:app.dashboardFilter==='installer'?installerRows.map(r=>queueGroupFromRecord(r,'Installed / Missing Info')):app.dashboardFilter==='calls'?calls.map(r=>queueGroupFromRecord(r,'Customer Calls')):app.dashboardFilter==='ccew'?ccewRows().map(r=>queueGroupFromRecord(r,r.source||'CCEW')):app.dashboardFilter==='missing'?missingDue:overdue;
+  let rows=app.dashboardFilter==='due'?dueNow:app.dashboardFilter==='all'?groups:app.dashboardFilter==='cer'?cer:app.dashboardFilter==='expiry'?groups.filter(j=>{const x=stcExpiryInfo(j);return x&&['watch','risk','critical','immediate','expired'].includes(x.status)}):app.dashboardFilter==='rfi'?rfi:app.dashboardFilter==='installer'?installerRows.map(r=>queueGroupFromRecord(r,'Installed / Missing Info')):app.dashboardFilter==='calls'?calls.map(r=>queueGroupFromRecord(r,'Customer Calls')):app.dashboardFilter==='ccew'?ccewRows().map(r=>queueGroupFromRecord(r,r.source||'CCEW')):app.dashboardFilter==='missing'?missingDue:overdue;
   const reviewItems=[];
   groups.filter(j=>j.lodgedReview).forEach(j=>reviewItems.push({j,text:`⚠ Lodged Review: ${j.gwt} — ${j.customer} still appears in Installed (Missing Info) while the EOD record is fully lodged. Review manually before chasing.`}));
   groups.filter(j=>j.eod&&!lodgementState(j.eod).valid).forEach(j=>reviewItems.push({j,text:`⚠ EOD Review: ${j.gwt} — the selected Job Type / Lodgement Status combination needs manual review before treating the EOD record as complete.`}));
@@ -651,11 +651,11 @@ function renderDashboard(){
   rows=rows.slice(0,18);
   $('dashboard').innerHTML=`
   ${reviewWarningHtml}<div class="section-title"><div><h1>Dashboard</h1><p>Daily working view — driven by Next Follow-Up Due and current workflow stage.</p></div><div class="actions"><button onclick="quickLog('installed')">＋ Log Job</button><button class="primary" onclick="quickLog('update')">＋ Add Update</button></div></div>
-  <div class="kpis">${kpi('Urgent / CER Rejected',cer.length,'Require immediate review','red',"app.dashboardFilter='cer';renderDashboard()")} ${kpi('RFI Requiring Action',rfi.length,'Active RFI workflow','amber',"app.dashboardFilter='rfi';renderDashboard()")} ${kpi('Installer Obligations',installerRows.length,'Due / overdue installer work','amber',"app.dashboardFilter='installer';renderDashboard()")} ${kpi('Customer Calls',calls.length,'Due under call rules','blue',"app.dashboardFilter='calls';renderDashboard()")} ${kpi('CCEW / COES',ccew.length,'Certificate workflow','purple',"app.dashboardFilter='ccew';renderDashboard()")}</div>
+  <div class="kpis">${kpi('Urgent / CER Rejected',cer.length,'Require immediate review','red',"app.dashboardFilter='cer';renderDashboard()")} ${kpi('STC Expiry Risk',groups.filter(j=>{const x=stcExpiryInfo(j);return x&&['watch','risk','critical','immediate','expired'].includes(x.status)}).length,'12-month STC creation deadline','red',"app.dashboardFilter='expiry';renderDashboard()")} ${kpi('RFI Requiring Action',rfi.length,'Active RFI workflow','amber',"app.dashboardFilter='rfi';renderDashboard()")} ${kpi('Installer Obligations',installerRows.length,'Due / overdue installer work','amber',"app.dashboardFilter='installer';renderDashboard()")} ${kpi('Customer Calls',calls.length,'Due under call rules','blue',"app.dashboardFilter='calls';renderDashboard()")} ${kpi('CCEW / COES',ccew.length,'Certificate workflow','purple',"app.dashboardFilter='ccew';renderDashboard()")}</div>
   ${missingDue.length?`<div class="banner warn"><b>⚠ Missing Follow-Up Due:</b> ${missingDue.length} active workflow record(s) need a current follow-up date. EOD lodgement records are excluded from this requirement.</div>`:''}
   ${dueNow.some(j=>j.lodgedReview)?`<div class="banner warn"><b>⚠ Lodged Review:</b> ${dueNow.filter(j=>j.lodgedReview).length} job(s) still appear in Installed (Missing Info) while the EOD record is fully lodged. Review manually before chasing.</div>`:''}
   <div class="banner process-strip"><b>Workflow:</b> Installed / Missing Info → EOD → RFI → CER. A GWT can legitimately appear across these stages. Same-stage + same-component repeats are the review candidates.</div>
-  <div class="seg">${seg('due','Due Now',dueNow.length)}${seg('all','All Active',groups.length)}${seg('cer','CER Audit',cer.length)}${seg('rfi','RFI',rfi.length)}${seg('installer','Installer',installerRows.length)}${seg('calls','Customer Calls',calls.length)}${seg('ccew','CCEW',uniqueByGwt(ccewRows()).length)}${seg('overdue','Overdue',overdue.length)}${seg('missing','Missing Due',missingDue.length)}</div>
+  <div class="seg">${seg('due','Due Now',dueNow.length)}${seg('all','All Active',groups.length)}${seg('cer','CER Audit',cer.length)}${seg('expiry','STC Expiry',groups.filter(j=>{const x=stcExpiryInfo(j);return x&&['watch','risk','critical','immediate','expired'].includes(x.status)}).length)}${seg('rfi','RFI',rfi.length)}${seg('installer','Installer',installerRows.length)}${seg('calls','Customer Calls',calls.length)}${seg('ccew','CCEW',uniqueByGwt(ccewRows()).length)}${seg('overdue','Overdue',overdue.length)}${seg('missing','Missing Due',missingDue.length)}</div>
   <div class="panel dashboard-workpanel"><div class="panel-title"><div><h3>${app.dashboardFilter==='due'?'Due Today / Overdue Work':'Dashboard Job List'}</h3><span class="subtle">${rows.length} shown · sorted by priority and Next Follow-Up Due</span></div><span class="subtle">Click a row to open the operational record</span></div>
     <div class="queue-tools"><input id="dashQ" placeholder="Filter this table…" value="${esc(query)}"><select id="dashDue"><option value="current">Due now · Today + Overdue</option><option value="today">Due today</option><option value="overdue">Overdue</option><option value="scheduled">All scheduled</option><option value="missing">Missing Follow-Up Due</option></select><button class="small" onclick="show('jobs')">Open full queue</button></div>
     ${workTable(rows)}
@@ -1061,11 +1061,14 @@ function pickActivityRecord(g,k,sheetHint='',rowHint=0){
   if(eligible.length===1)return eligible[0];
   return null;
 }
-function saveUpdateToJob(gwtKey,text,kind,sheetHint='',rowHint=0){
+function saveUpdateToJob(gwtKey,text,kind,sheetHint='',rowHint=0,category=''){
   const r=pickActivityRecord(gwtKey,kind,sheetHint,rowHint);if(!r){alert('No suitable tracker record found for this action.');return}
   const idx=colIndex(r.headers,kind==='issue'?['ISSUE','Issue','Missing Info/Issue']:kind==='next'?['Next steps','Next Step']:['Activity Log / Update','Activity Log','UPDATE','Actions Taken']);
   if(idx<0){alert('That field does not exist on this workflow row.');return}
-  const ws=wb.Sheets[r.sheet];setCellPreserve(ws,r.row,idx,appendHistory(r.values[idx]||'',text));if(kind==='update')rememberActivityMeta(r.sheet,r.row,idx,text,'Update');dirty=true;resetCache();closeModal();renderDrawer();
+  const ws=wb.Sheets[r.sheet];
+  const actionable=kind==='next'||['WA — GC','WA — DM','Email Sent','Installer Call','Installer Confirmed Action','Installer Scheduled Return Visit','Installer Completed Action','Evidence Requested','Evidence Received','CCEW Requested','Correction Requested','Installer Unable / Delayed','Installer Dispute / Explanation','Internal Hold / Decision Required','System / Equipment Decision'].includes(category);
+  if(actionable&&requiresFollowUpDue(r.sheet,r.values)&&!followUpDue(r)){alert('This actionable update requires a Follow-Up Due date. Add the due date before saving the update.');openDueEditor(gwtKey,r.sheet,r.row);return}
+  setCellPreserve(ws,r.row,idx,appendHistory(r.values[idx]||'',text));if(kind==='update')rememberActivityMeta(r.sheet,r.row,idx,text,category||'Update');dirty=true;resetCache();closeModal();renderDrawer();
 }
 function openDueEditor(gwtKey,sheetHint='',rowHint=0){
   const j=buildGroupForGwt(gwtKey);if(!j){alert('Job could not be located.');return}
@@ -1189,11 +1192,14 @@ function activityPrompt(gwtKey,kind,sheetHint='',rowHint=0){
   candidates=candidates.filter(r=>colIndex(r.headers,targetHeader)>=0);
   let selector='';
   if(candidates.length>1){selector=`<div class="field"><label>Record / Component</label><select id="activityRecordSelect">${candidates.map(r=>{const wi=colIndex(r.headers,['Work Type']);const label=wi>=0?display(r.values[wi]):'General';return `<option value="${r.row}" data-sheet="${esc(r.sheet)}" ${(r.row===rowHint&&r.sheet===sourceSheet)?'selected':''}>${esc(label)} · ${esc(r.sheet)} · row ${r.row}</option>`}).join('')}</select><div class="subtle" style="margin-top:4px">Choose the component row this entry belongs to. PV and Battery RFI rows for the same GWT are legitimate.</div></div>`}
-  $('modalCard').innerHTML=`<div class="modal-head"><div><h2>${title}</h2><div class="subtle">${esc(gwtKey)}${sourceSheet?` · ${esc(sourceSheet)}`:''}</div></div><button onclick="closeModal()">✕</button></div>${selector}<div class="field"><label>Entry</label><textarea id="activityEntry" autofocus placeholder="One item per line"></textarea></div><div class="modal-foot"><button onclick="closeModal()">Cancel</button><button class="primary" onclick="saveActivityPrompt('${esc(gwtKey)}','${esc(kind)}','${esc(sourceSheet)}')">Save</button></div>`;
+  const categories=['Customer Call','Customer Commitment','Customer SMS','Customer Email','Customer Unable to Contact','Customer Requested Callback','Customer Document/Signature Confirmation','Customer Concern / Complaint','Customer Confirmation of Completion','Zoho Update / Note','Teammate Update','Senior Ops / Management Decision','Inspector Contact / Call Log','CER / GreenDeal Internal Update','Internal Ownership Change','Internal Hold / Decision Required','System / Equipment Decision','Internal Confirmation of Resolution','WA — GC','WA — DM','Email Sent','Installer Call','Installer Confirmed Action','Installer Scheduled Return Visit','Installer Completed Action','Evidence Requested','Evidence Received','CCEW Requested','CCEW Issued / Uploaded','Correction Requested','Installer Unable / Delayed','Installer Dispute / Explanation'];
+  const defaultCat=kind==='update'?'Internal Update':'';
+  const catField=kind==='update'?`<div class="field"><label>Activity Category</label><select id="activityCategory">${categories.map(c=>`<option ${c===defaultCat?'selected':''}>${esc(c)}</option>`).join('')}</select></div>`:'';
+  $('modalCard').innerHTML=`<div class="modal-head"><div><h2>${title}</h2><div class="subtle">${esc(gwtKey)}${sourceSheet?` · ${esc(sourceSheet)}`:''}</div></div><button onclick="closeModal()">✕</button></div>${selector}${catField}<div class="field"><label>Entry</label><textarea id="activityEntry" autofocus placeholder="One item per line"></textarea></div><div class="modal-foot"><button onclick="closeModal()">Cancel</button><button class="primary" onclick="saveActivityPrompt('${esc(gwtKey)}','${esc(kind)}','${esc(sourceSheet)}')">Save</button></div>`;
   if(candidates.length>1){const sel=$('activityRecordSelect');sel.dataset.sheet=sel.options[sel.selectedIndex]?.dataset.sheet||sourceSheet;sel.onchange=()=>sel.dataset.sheet=sel.options[sel.selectedIndex]?.dataset.sheet||sourceSheet;}
   $('modal').classList.add('open')
 }
-function saveActivityPrompt(g,k,sheetHint=''){const t=$('activityEntry').value.trim();if(!t)return;const rowHint=Number($('activityRecordSelect')?.value||0);const selectedSheet=$('activityRecordSelect')?.dataset.sheet||sheetHint;saveUpdateToJob(g,t,k,selectedSheet,rowHint)}
+function saveActivityPrompt(g,k,sheetHint=''){const t=$('activityEntry').value.trim();if(!t)return;const rowHint=Number($('activityRecordSelect')?.value||0);const selectedSheet=$('activityRecordSelect')?.dataset.sheet||sheetHint;const category=$('activityCategory')?.value||'';saveUpdateToJob(g,t,k,selectedSheet,rowHint,category)}
 function openIssueEditor(sheet,row){
   const r=records(sheet).find(x=>x.row===row);if(!r){alert('Issue record could not be located.');return}
   $('modalCard').innerHTML=`<div class="modal-head"><div><h2>Edit Issue</h2><div class="subtle">${esc(sheet)} · ${esc(r.gwt)} · Row ${row}</div></div><button onclick="closeModal()">✕</button></div><div class="field full"><label>Issue</label><textarea id="issueEdit" style="min-height:260px">${esc(r.issue||'')}</textarea></div><div class="notice-card"><h4>Replace vs add</h4><p>This replaces the Issue field exactly as shown. Use “＋ Issue” when you want to preserve the existing issue history and add a new dated issue entry.</p></div><div class="modal-foot"><button onclick="closeModal()">Cancel</button><button class="primary" onclick="saveIssueEditor('${esc(sheet)}',${row})">Save Issue</button></div>`;$('modal').classList.add('open')
@@ -1249,9 +1255,17 @@ attachGlobal();renderView();
    Phase 3: contextual installer drafting / daily change summary / ack flow
    ====================================================================== */
 (function(){
-  const V16_APP_VERSION='V16 — Accuracy + Intelligence + Automation';
+  const V16_APP_VERSION='V21 — Compliance Intelligence + Expiry + Contextual Drafting';
   const TIMESTAMP_CAMERA_URL='https://play.google.com/store/apps/details?hl=en-US&id=com.jeyluta.timestampcamerafreeent';
   const ACK_KEY='claraWarningAcknowledgementsV2';
+  const GD_STATE_KEY='claraGreenDealStateV1';
+  const RULE_VERSION='CER/SAA rules checked 07 Oct 2026';
+  let greenDealState={};
+  try{greenDealState=JSON.parse(window.localStorage?.getItem(GD_STATE_KEY)||'{}')||{}}catch(e){greenDealState={}}
+  function saveGreenDealState(){try{window.localStorage?.setItem(GD_STATE_KEY,JSON.stringify(greenDealState))}catch(e){}}
+  function getGreenDealState(gwt){return greenDealState[gwt]||null}
+  function setGreenDealState(gwt,state){if(!gwt)return;greenDealState[gwt]={...state,confirmedAt:new Date().toISOString()};saveGreenDealState()}
+
   let warningAcks={};
   try{warningAcks=JSON.parse(window.localStorage?.getItem(ACK_KEY)||'{}')||{}}catch(e){warningAcks={}}
 
@@ -1443,10 +1457,60 @@ attachGlobal();renderView();
   function meaningfulWarning(key,label,text,jwt){
     return {key,label,text,gwt:jwt?.gwt||'',customer:jwt?.customer||'',type:'warning'};
   }
+  function stcClaimedComponents(j){
+    const out={pv:false,battery:false};
+    for(const r of (j?.eodRecords||[])){
+      const pv=colIndex(r.headers,['PV-STC Lodged Date']),bt=colIndex(r.headers,['BAT-STC Lodged Date']);
+      if(pv>=0&&lodgedConfirmed(r.values[pv]))out.pv=true;
+      if(bt>=0&&lodgedConfirmed(r.values[bt]))out.battery=true;
+    }
+    return out;
+  }
+  function stcExpiryInfo(j){
+    const dates=(j?.installedRecords||[]).map(r=>r.installDate).filter(Boolean).sort((a,b)=>a-b);
+    if(!dates.length)return null;
+    const install=dates[0],deadline=new Date(install);deadline.setFullYear(deadline.getFullYear()+1);
+    const days=daysBetween(today(),deadline),claimed=stcClaimedComponents(j);
+    const jt=norm([j?.eod?.jobType,j?.installed?.jobType].join(' '));
+    const wantsBat=/battery|pv\s*\+\s*battery|pv\+battery/.test(jt)||claimed.battery||j?.cerRecords?.some(r=>norm([r.issue,r.blocker,r.nextSteps].join(' ')).includes('battery'));
+    const wantsPv=!/battery only/.test(jt);
+    const components=[];if(wantsPv&&!claimed.pv)components.push('PV');if(wantsBat&&!claimed.battery)components.push('Battery');
+    if(!components.length)return {install,deadline,days,claimed,components,status:'claimed'};
+    let status='normal';if(days<0)status='expired';else if(days<=7)status='immediate';else if(days<=14)status='critical';else if(days<=30)status='risk';else if(days<=56)status='watch';
+    return {install,deadline,days,claimed,components,status};
+  }
+  function greenDealEditability(j){
+    const saved=getGreenDealState(j?.gwt);if(saved?.status)return saved;
+    const text=norm((j?.records||[]).map(r=>[r.update,r.issue,r.nextSteps,r.notes,r.actionsTaken,r.status].join(' ')).join(' '));
+    if(/(?:greendeal|green deal).{0,40}(?:closed|locked|not editable|no longer open|cannot edit|unable to edit)/.test(text)||/(?:closed|locked|not editable).{0,40}(?:greendeal|green deal)/.test(text))return {status:'closed',source:'tracker evidence'};
+    if(/(?:greendeal|green deal).{0,40}(?:open|editable|can edit|still open)/.test(text)||/(?:open|editable).{0,40}(?:greendeal|green deal)/.test(text))return {status:'open',source:'tracker evidence'};
+    return {status:'unknown',source:'not confirmed'};
+  }
+  function complianceFindings(j){
+    const findings=[];const text=norm((j?.records||[]).map(r=>[r.issue,r.blocker,r.nextSteps,r.update,r.notes,r.actionsTaken,r.status].join(' ')).join(' '));const expiry=stcExpiryInfo(j);
+    if(expiry&&['watch','risk','critical','immediate','expired'].includes(expiry.status)){
+      const label=expiry.status==='expired'?'STC eligibility deadline passed':expiry.status==='immediate'?'STC claim deadline within 7 days':expiry.status==='critical'?'STC claim deadline within 14 days':expiry.status==='risk'?'STC claim deadline within 30 days':'STC claim deadline within 8 weeks';
+      findings.push({key:`stc-expiry|${j.gwt}|${expiry.status}|${isoDate(expiry.deadline)}`,type:'STC Expiry',severity:['expired','immediate'].includes(expiry.status)?'High':['critical','risk'].includes(expiry.status)?'Medium':'Low',label,text:`${label}. ${expiry.components.join(' + ')} STC component${expiry.components.length>1?'s':''} not confirmed lodged. Deadline ${fmtDate(expiry.deadline)}.`,expiry});
+    }
+    const hasBattery=/battery|powerwall|storage/.test(text)||/battery/.test(norm(j?.jobType||''));
+    if(hasBattery&&expiry?.install&&expiry.install>=new Date('2026-03-01')&&!/critical labell?ing|labell?ing photo|battery label/.test(text)){
+      findings.push({key:`battery-label-photo|${j.gwt}`,type:'CER Evidence',severity:'Medium',label:'Battery labelling photo evidence not evident',text:'Battery installation is on/after 1 March 2026, but the tracker does not clearly record the required critical-labelling photo evidence. Check GreenDeal evidence before requesting a return visit.',rule:'CER battery photo requirement'});
+    }
+    if(/switchboard|msb/.test(text)&&/photo|evidence/.test(text)&&/missing|rejected|incorrect|not show/.test(text))findings.push({key:`msb-evidence|${j.gwt}`,type:'CER Evidence',severity:'Medium',label:'Switchboard evidence risk',text:'Current activity indicates switchboard/meter-box evidence is incomplete or rejected. Verify the exact evidence requirement before requesting new photos.'});
+    const gd=greenDealEditability(j);
+    if(gd.status==='unknown'&&/photo|evidence|selfie|switchboard|msb|panel|battery label|geotag|timestamp/.test(text))findings.push({key:`gd-editability|${j.gwt}`,type:'Confirmation Required',severity:'High',label:'GreenDeal editability must be confirmed',text:'New compliance evidence appears to be required, but the CRM cannot confirm whether the GreenDeal job is still editable. Confirm Open/Editable or Closed/Locked before drafting the installer instruction.',confirmation:true});
+    if(/(?:asked|requested|requesting|please).{0,60}(?:inverter|swap|replacement|return to site|rectification)/.test(text)&&!/(?:confirmed|completed|finished|done|uploaded|evidence received).{0,60}(?:inverter|swap|replacement|return to site|rectification)/.test(text))findings.push({key:`completion-proof|${j.gwt}`,type:'Process Risk',severity:'Medium',label:'Requested work is not confirmed complete',text:'The tracker shows a request/instruction but no positive confirmation that the installer completed the work and supplied the required evidence.'});
+    return findings;
+  }
+  function installerDraftContext(r){const j=buildGroupForGwt(r?.gwt);return {gd:greenDealEditability(j||{}),findings:complianceFindings(j||{}),expiry:stcExpiryInfo(j||{})};}
   function truthForJob(j){
     const actionNow=[], review=[], monitor=[], resolved=[];
     const add=(bucket,item)=>{if(!item||!item.key)return;if(!bucket.some(x=>x.key===item.key))bucket.push(item)};
     const now=today();
+    for(const f of complianceFindings(j)){
+      const bucket=f.severity==='High'?actionNow:review;
+      add(bucket,{key:f.key,type:f.type,label:f.label,owner:'Isaac',due:f.expiry?.deadline||null,priority:f.severity==='High'?'High':f.severity==='Medium'?'Medium':'Low',record:null,text:f.text,confirmation:f.confirmation,rule:f.rule});
+    }
     // Highest-priority operational stages first.
     for(const r of (j.cerRecords||[])){
       const stale=likelyStaleRecord(r);
@@ -1502,6 +1566,9 @@ attachGlobal();renderView();
         add(monitor,{key:`eodambiguous|${j.eod.row}|${activityMetaHash(info.raw)}`,type:'EOD',label:'Legacy lodgement component inferred',owner:'Isaac',record:j.eod,text:'The legacy Status records lodgement activity but does not state the component explicitly. No chase is created from this alone.'});
       }
     }
+    for(const r of [...(j.installedRecords||[]),...(j.rfiRecords||[]),...(j.cerRecords||[]),...(j.actRecords||[])]){
+      if(requiresFollowUpDue(r.sheet,r.values)&&!r.followUpDue)add(actionNow,{key:`missing-due|${r.sheet}|${r.row}`,type:'Follow-Up',label:'Mandatory Follow-Up Due is missing',owner:'Isaac',priority:'High',record:r,text:'This active workflow requires a current Follow-Up Due date so it cannot fall through the queue.'});
+    }
     const company=companyForRecord(j.currentRecord||j.installed||j.rfi||j.cer||j.eod||{});
     const staleAny=[...actionNow].map(x=>likelyStaleRecord(x.record)).filter(Boolean);
     if(staleAny.length){
@@ -1513,11 +1580,12 @@ attachGlobal();renderView();
     const activeReview=warningCandidates.filter(x=>!warningAcks[x.key]);
     const ackedReview=warningCandidates.filter(x=>warningAcks[x.key]);
     let priority='Low';
-    if(actionNow.some(x=>x.priority==='High'))priority='High';
+    if(actionNow.some(x=>x.type==='CER'||x.type==='STC Expiry'||x.priority==='High'))priority='High';
     else if(actionNow.length||activeReview.length)priority='Medium';
     const state=actionNow.length?'Action Now':activeReview.length?'Review':monitor.length?'Monitor':'Resolved';
     const currentAction=actionNow[0]||activeReview[0]||monitor[0]||null;
     const why=[];
+    const cf=complianceFindings(j);if(cf.length)why.push(cf.map(x=>x.label).join('; '));
     if(j.cerRecords?.length)why.push('CER has an active audit/rejection record.');
     if(j.rfiRecords?.length)why.push('RFI has an active compliance record.');
     if(j.actRecords?.some(r=>norm(r.status)==='pending'))why.push('ACT CCEW is Pending and needs internal ownership confirmation.');
@@ -1650,8 +1718,11 @@ attachGlobal();renderView();
   }
 
   function drawerOverviewV16(j){
+    const expiry=stcExpiryInfo(j),compliance=complianceFindings(j);
     const t=j.truth||truthForJob(j), primary=t.primary, base=j.currentRecord||j.installed||j.rfi||j.cer||j.eod, c=contactForRecord(base||{}), modules=moduleTruthRows(j);
     const warnings=t.review||[];
+    const expiryCard=expiry&&expiry.status!=='claimed'?`<div class="context-card"><div class="title">STC Eligibility Deadline</div><div class="body"><b>${esc(fmtDate(expiry.deadline))}</b> · ${expiry.days<0?'Expired':expiry.days+' day(s) remaining'}<br>${esc(expiry.components.join(' + ')||'All tracked components lodged')}</div></div>`:'';
+    const complianceCard=compliance.length?`<div class="context-card"><div class="title">Compliance Intelligence</div><div class="body">${compliance.map(x=>`<b>${esc(x.label)}</b><br>${esc(x.text)}`).join('<br><br>')}</div></div>`:'';
     return `<div class="drawer-section"><div class="truth-hero"><div><div class="gwt">${esc(j.gwt||'No GWT')}</div><h2>${esc(j.customer||'Unknown customer')}</h2><div class="address">${esc(j.address||'')}</div></div><span class="badge ${t.priority==='High'?'red':t.state==='Action Now'?'amber':t.state==='Review'?'purple':t.state==='Monitor'?'blue':'green'}">${esc(t.state)}</span></div>
     <div class="drawer-grid"><div class="kv"><div class="k">Current Owner</div><div class="v">${esc(primary?.owner||'—')}</div></div><div class="kv"><div class="k">Next Action</div><div class="v">${esc(primary?.label||'No immediate action')}</div></div><div class="kv"><div class="k">Due</div><div class="v">${primary?.due?esc(fmtDate(primary.due)):'—'}</div></div><div class="kv"><div class="k">Priority</div><div class="v">${esc(t.priority)}</div></div><div class="kv"><div class="k">Company</div><div class="v">${esc(c.company||j.company||'—')}</div></div><div class="kv"><div class="k">Installer</div><div class="v">${esc(j.installer||'—')}</div></div><div class="kv"><div class="k">Communication Route</div><div class="v">${esc(c.route||'Verify in Subcontractor List')}</div></div><div class="kv"><div class="k">Contact</div><div class="v">${esc(c.phone||c.email||'—')}</div></div></div></div>
     <div class="drawer-section"><div class="panel-title"><h3>Why this is here</h3><span class="subtle">Single operational truth</span></div><div class="notice-card"><b>${esc(t.state)}</b><p>${esc(t.why)}</p>${primary?`<p><b>Now:</b> ${esc(primary.label)}${primary.text?` — ${esc(primary.text)}`:''}</p>`:''}</div></div>
@@ -1747,28 +1818,46 @@ attachGlobal();renderView();
     $('msgRows').innerHTML=filtered.map(r=>{const route=routeForRecord(r), mapped=route!=='Communication route not confirmed in Subcontractor List.'&&route!=='Company not mapped';return `<label class="message-select-row"><input type="checkbox" class="msg-check" data-msg-id="${esc(r.sheet+'|'+r.row)}" ${selected.has(r.sheet+'|'+r.row)?'checked':''}><span><strong>${esc(r.gwt)} · ${esc(r.customer)}</strong><small>${esc(r.address)}</small><small>${esc(r.company||companyForRecord(r))} · ${esc(r.installer||'Installer')}</small><small><b>Need:</b> ${esc(r.action||actionTextForRecord(r))}</small><small><b>Route:</b> ${esc(route)}</small><small>${r.followUpDue?`Due ${fmtDate(r.followUpDue)}`:'No chase date recorded'}</small>${!mapped?'<small class="danger-text">Route not confirmed — verify before sending.</small>':''}</span></label>`}).join('')||'<div class="empty">No installer jobs match the filter.</div>';
     document.querySelectorAll('.msg-check').forEach(cb=>cb.onchange=()=>{if(cb.checked)selected.add(cb.dataset.msgId);else selected.delete(cb.dataset.msgId);window._installerComposerPreselect=selected});
   }
-  function generateInstallerDraftTextV16(){
-    const rows=window._installerComposerRows||[], selected=window._installerComposerPreselect||new Set(), chosen=rows.filter(r=>selected.has(r.sheet+'|'+r.row)); if(!chosen.length){alert('Select at least one job.');return}
+  function openGreenDealConfirmation(need,chosen){
+    const first=need[0];
+    $('modalCard').innerHTML=`<div class="modal-head"><div><h2>GreenDeal editability confirmation required</h2><div class="subtle">The CRM is unsure whether this job is still editable. It will not guess because this changes the installer instruction.</div></div><button onclick="closeModal()">✕</button></div><div class="notice-card"><h4>${esc(first.gwt)} — ${esc(first.customer)}</h4><p>Please confirm the current GreenDeal state:</p><div class="actions"><button class="primary" onclick="confirmGreenDealState('open')">Open / Editable</button><button onclick="confirmGreenDealState('closed')">Closed / Not Editable</button></div><p class="subtle">Your confirmation will be saved as a dated operational update on the job and used when drafting the installer message.</p></div>`;$('modal').classList.add('open');window._pendingGreenDealConfirmation={need,chosen,index:0};
+  }
+  function confirmGreenDealState(status){
+    const p=window._pendingGreenDealConfirmation;if(!p)return;const r=p.need[p.index];setGreenDealState(r.gwt,{status,source:'Isaac confirmation'});const text=`GreenDeal editability confirmed by Isaac: ${status==='open'?'Open / Editable':'Closed / Not Editable'}.`;
+    const rr=records(r.sheet).find(x=>x.row===r.row),idx=rr?colIndex(rr.headers,['Activity Log / Update','Activity Log','UPDATE','Actions Taken']):-1;
+    if(rr&&idx>=0){setCellPreserve(wb.Sheets[rr.sheet],rr.row,idx,appendHistory(rr.values[idx]||'',text));rememberActivityMeta(rr.sheet,rr.row,idx,text,'CER / GreenDeal Internal Update');dirty=true;resetCache();}
+    p.index++;if(p.index<p.need.length){openGreenDealConfirmation(p.need.slice(p.index),p.chosen)}else{closeModal();window._pendingGreenDealConfirmation=null;generateInstallerDraftTextV16(true)}
+  }
+  window.confirmGreenDealState=confirmGreenDealState;
+  function generateInstallerDraftTextV16(skipGate=false){
+    const rows=window._installerComposerRows||[],selected=window._installerComposerPreselect||new Set(),chosen=rows.filter(r=>selected.has(r.sheet+'|'+r.row));if(!chosen.length){alert('Select at least one job.');return}
+    if(!skipGate){const need=chosen.filter(r=>{const t=norm([r.issue,r.blocker,r.nextSteps,r.update,r.notes].join(' '));return /photo|evidence|selfie|switchboard|msb|panel|battery label|geotag|timestamp/.test(t)&&greenDealEditability(buildGroupForGwt(r.gwt)||{}).status==='unknown'});if(need.length){openGreenDealConfirmation(need,chosen);return}}
     const unmapped=chosen.filter(r=>routeForRecord(r)==='Communication route not confirmed in Subcontractor List.'||companyForRecord(r)==='Company not mapped');
     if(unmapped.length){alert('Communication route/company is not confirmed for one or more selected installers. Update the Subcontractor List first; no installer draft was generated.');return}
     const grouped=new Map();chosen.forEach(r=>{const key=r.installer||r.company||'Installer';if(!grouped.has(key))grouped.set(key,[]);grouped.get(key).push(r)});
     const body=[];let anyPhoto=false,anyReturn=false;
     const needFor=r=>{
       const t=norm([r.issue,r.blocker,r.nextSteps,r.update,r.notes].join(' '));
-      const photo=/photo|evidence|selfie|switchboard|msb|panels installed|installation photos?/.test(t), ret=/return\s*-?to\s*site|revisit|return to site|attend site/.test(t);
-      anyPhoto=anyPhoto||photo;anyReturn=anyReturn||ret;
-      if(/ccew|coes/.test(t))return 'Please issue/correct the required CCEW/COES and upload it directly to the GreenDeal job once available. If GreenDeal access is unavailable, please contact me before proceeding.';
-      if(/system details|system discrepancy|inverter|installed system.*different|variation/.test(t))return 'Please confirm the context for the system discrepancy (what was installed versus the approved system) and advise me before making any further corrective change.';
-      if(/address/.test(t)&&/reject|wrong|incorrect/.test(t))return 'Please correct the address-related documentation/CCEW so the customer address matches the supporting evidence, then confirm it is ready for resubmission.';
-      if(/switchboard|msb/.test(t))return 'Please provide the required full switchboard / meter-box evidence for the affected installation.';
-      if(/panel|pv array|pv module/.test(t))return 'Please provide clear evidence showing the complete installed PV array required for this job.';
-      if(/battery/.test(t))return 'Please confirm the battery installation / commissioning requirement has been completed and provide the required compliance evidence.';
-      if(photo)return 'Please provide the specific missing installation/compliance evidence noted for this job.';
-      if(ret)return 'Please return to site to complete the required rectification and capture the updated evidence.';
-      return String(r.issue||r.nextSteps||r.blocker||r.action||'the outstanding GreenDeal requirement').replace(/\s+/g,' ').trim();
+      const ctx=installerDraftContext(r),gd=ctx.gd;
+      const photo=/photo|evidence|selfie|switchboard|msb|panels installed|installation photos?|labelling/.test(t),ret=/return\s*-?to\s*site|revisit|return to site|attend site/.test(t);
+      anyPhoto=anyPhoto||photo;anyReturn=anyReturn||ret;let base='';
+      if(/ccew|coes/.test(t))base='Please issue/correct the required CCEW/COES and upload it directly to the GreenDeal job once available.';
+      else if(/system details|system discrepancy|inverter|installed system.*different|variation/.test(t))base='Please confirm the context for the system discrepancy (what was installed versus the approved system) and advise me before making any further corrective change.';
+      else if(/address/.test(t)&&/reject|wrong|incorrect/.test(t))base='Please correct the address-related documentation/CCEW so the customer address matches the supporting evidence, then confirm it is ready for resubmission.';
+      else if(/switchboard|msb/.test(t))base='Please provide the required full switchboard / meter-box evidence for the affected installation.';
+      else if(/panel|pv array|pv module/.test(t))base='Please provide clear evidence showing the complete installed PV array required for this job.';
+      else if(/battery/.test(t))base='Please confirm the battery installation / commissioning requirement has been completed and provide the required compliance evidence.';
+      else if(photo)base='Please provide the specific missing installation/compliance evidence noted for this job.';
+      else if(ret)base='Please return to site to complete the required rectification and capture the updated evidence.';
+      else base=String(r.issue||r.nextSteps||r.blocker||r.action||'the outstanding GreenDeal requirement').replace(/\s+/g,' ').trim();
+      if(photo&&gd.status==='closed')base+=' As the GreenDeal job is closed/not editable, please do not rely on uploading the new evidence there. Please use a camera app that captures both geotagging and the timestamp (Timestamp Camera Enterprise if required), then send the original photos directly to me.';
+      else if(photo&&gd.status==='open')base+=' Please upload the required evidence directly to the GreenDeal job and make sure the photos retain the required geotagging and timestamp.';
+      if(/battery/.test(t)&&ctx.expiry?.install&&ctx.expiry.install>=new Date('2026-03-01'))base+=' For battery work, make sure the required critical-labelling photos are captured clearly, geotagged and timestamped.';
+      if(ret)base+=' Please confirm once the rectification is actually completed and the updated evidence is available; a request to attend site is not treated as completion.';
+      return base;
     };
-    grouped.forEach((rs,installer)=>{body.push(`Hi ${installer},\n\nPlease assist with the following GreenDeal item${rs.length>1?'s':''}:\n\n${rs.map(r=>`• ${r.gwt} — ${r.customer} — ${r.address}\n  ${needFor(r)}`).join('\n')}`)});
-    if(anyPhoto)body.push(`For any new site photos, geotagging and timestamping are mandatory. If GreenDeal is closed or you cannot upload to the job, use Timestamp Camera Enterprise and send the original photos directly to me:\n${TIMESTAMP_CAMERA_URL}`);
+    grouped.forEach((rs,installer)=>{body.push(`Hi,\n\nPlease assist with the following GreenDeal item${rs.length>1?'s':''}:\n\n${rs.map(r=>`• ${r.gwt} — ${r.customer} — ${r.address}\n  ${needFor(r)}`).join('\n')}`)});
+    if(anyPhoto)body.push(`For all new site evidence, geotagging and timestamping are mandatory. Please follow the GreenDeal upload instructions for each job; where a job is closed/not editable, use Timestamp Camera Enterprise and send the original photos directly to me. App: ${TIMESTAMP_CAMERA_URL}`);
     if(anyReturn)body.push('Please confirm once any required return-to-site rectification has been completed and the updated evidence is available.');
     body.push('Thanks.');
     $('installerMessageText').value=body.join('\n\n');
