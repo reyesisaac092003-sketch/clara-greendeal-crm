@@ -1922,7 +1922,7 @@ attachGlobal();renderView();
   }
 
   async function fetchMeta(){
-    const q='spreadsheets/'+encodeURIComponent(state.spreadsheetId)+'?fields=spreadsheetId,properties(title),sheets(properties(sheetId,title,index,hidden,gridProperties(rowCount,columnCount)) )';
+    const q='spreadsheets/'+encodeURIComponent(state.spreadsheetId);
     const data=await api(q);
     state.spreadsheetTitle=data?.properties?.title||'';
     state.sheetMeta=(data?.sheets||[]).map(s=>s);
@@ -1993,15 +1993,15 @@ attachGlobal();renderView();
   function renderGoogleConnectStep2(){
     $('modalCard').innerHTML=`<div class="modal-head"><div><h2>Connect your Green Deal Google Sheet</h2><div class="subtle">Google account authorised. Now select the live tracker.</div></div><button onclick="closeModal()">✕</button></div>
       <div class="google-success"><b>Google account connected.</b><br>Clara has permission to use the Google Sheets API on your behalf. Your access token remains in browser memory.</div>
-      <div class="google-config" style="margin-top:12px"><div class="field"><label>Google Sheet URL</label><input id="googleSheetRef" placeholder="https://docs.google.com/spreadsheets/d/..." value="${esc(state.spreadsheetId?`https://docs.google.com/spreadsheets/d/${state.spreadsheetId}/edit`: '')}"></div>
+      <div class="google-config" style="margin-top:12px"><div class="field"><label>Google Spreadsheet ID</label><input id="googleSheetRef" placeholder="15RUWnKO-L7GN9BAMhzRn-pQCgegBZ9ZQgGaNH55S3dI" value="${esc(state.spreadsheetId||'')}"></div>
       <label class="inline-label"><input id="googleAutoSync" type="checkbox" ${state.autoSync?'checked':''}> Automatically pull Google changes every 30 seconds when idle</label>
-      <div class="hint">Paste the normal Google Sheets URL. Clara extracts only the Spreadsheet ID and ignores parameters such as <span class="mono">?gid=...</span>, <span class="mono">?pli=1</span>, and <span class="mono">#gid=...</span>.</div></div>
+      <div class="hint">Paste the Spreadsheet ID from the Google Sheets URL. Clara uses the ID directly and does not require the full URL.</div></div>
       <div id="googlePanelExtra"></div><div class="modal-foot"><button onclick="closeModal()">Cancel</button><button class="primary" onclick="loadConnectedGoogleSheet()">Verify & Load Sheet</button></div>`;
   }
   async function loadConnectedGoogleSheet(){
     const sheetInput=$('googleSheetRef')?.value.trim()||'';
-    const sid=spreadsheetIdFrom(sheetInput);
-    if(!sid){setGooglePanel('<div class="google-error"><b>Invalid Google Sheets URL.</b><br>Paste the full URL beginning with https://docs.google.com/spreadsheets/d/</div>');return}
+    const sid=String(sheetInput).trim();
+    if(!/^[a-zA-Z0-9_-]{20,}$/.test(sid)){setGooglePanel('<div class="google-error"><b>Invalid Google Spreadsheet ID.</b><br>Paste the Spreadsheet ID only, not the full Google Sheets URL.</div>');return}
     state.spreadsheetId=sid;state.autoSync=$('googleAutoSync')?.checked!==false;cfgPersist();
     if(dirty&&!confirm('The CRM has local unsaved changes. Connecting to Google will replace the local workbook with the live Google Sheet and discard those local changes. Continue?'))return;
     state.syncing=true;state.lastError='';updateGoogleUi();
